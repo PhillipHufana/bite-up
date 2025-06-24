@@ -19,8 +19,8 @@ export default function Navigation({ activeTab, setActiveTab }) {
             <button
               key={item}
               onClick={() => setActiveTab(item)}
-              className={`text-white font-poppins text-lg font-medium transition-all duration-300 ease-in-out hover:text-yellow-300 hover:scale-105 ${
-                activeTab === item ? "text-yellow-300 scale-105" : ""
+              className={`text-white font-poppins text-lg font-medium hover:text-yellow-300 ${
+                activeTab === item ? "text-yellow-300" : ""
               }`}
             >
               {item}
