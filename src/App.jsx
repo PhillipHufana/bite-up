@@ -26,7 +26,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#FEF2E5" }}>
+    <div className="min-h-screen bg-gradient-to-b from-[#FEF2E5] to-blue-100">
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         {renderContent()}
