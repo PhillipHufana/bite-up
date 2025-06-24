@@ -52,8 +52,6 @@ app.delete("/api/ingredients/:id", (req, res) => {
 });
 
 
-
-
 //UPDATE ingredient
 app.put("/api/ingredients/:id", (req, res) => {
   const { id } = req.params;
