@@ -48,6 +48,46 @@ app.get("/api/ingredients", (req, res) => {
   });
 });
 
+//create ingredients module
+app.post("/api/ingredients", (req, res) => {
+  const {
+    name,
+    category,
+    brand,
+    unit,
+    price,
+    quantity,
+    ml_to_gram_conversion,
+    cost_per_gram,
+    purchase_date
+  } = req.body;
+
+  const query = `
+    INSERT INTO ingredient 
+    (name, category, brand, unit, price, quantity, ml_to_gram_conversion, cost_per_gram, purchase_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  const values = [
+    name,
+    category,
+    brand,
+    unit,
+    price,
+    quantity,
+    ml_to_gram_conversion,
+    cost_per_gram,
+    purchase_date
+  ];
+
+  db.query(query, values, (err, result) => {
+    if (err) {
+      console.error("MySQL Insert Error:", err);
+      return res.status(500).json({ error: "Failed to save ingredient" });
+    }
+    res.status(201).json({ message: "Ingredient created successfully" });
+  });
+});
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });

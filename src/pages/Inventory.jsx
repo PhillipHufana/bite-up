@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import IngredientForm from "../components/createForm";
 
 const Inventory = () => {
   const [ingredients, setIngredients] = useState([]);
@@ -29,7 +30,7 @@ const Inventory = () => {
   return (
     <div className="p-10">
       <h1 className="text-2xl font-bold mb-6">Inventory Table</h1>
-
+      <IngredientForm />
       {loading ? (
         <p className="text-gray-500">Loading...</p>
       ) : (
