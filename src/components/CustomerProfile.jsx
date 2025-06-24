@@ -38,7 +38,7 @@ export default function CustomerProfile() {
         },
         {
           id: "2",
-          name: "Pasaporte, Melvine",
+          name: "Pasaporte, Melvin",
           phone: "0912 345 6789",
           email: "ms@gmail.com",
           address: "TTBDO, Davao City",
