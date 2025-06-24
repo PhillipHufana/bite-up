@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { ChevronDown, ChevronUp, Edit, Trash2, X } from "lucide-react"
+import Navbar from "../components/Navbar"
 
 const Inventory = () => {
   const [ingredients, setIngredients] = useState([])
@@ -27,8 +28,8 @@ const Inventory = () => {
       quantity: "",
       ml: "",
       grams: "",
-      costPerUnit: ""
-    }
+      costPerUnit: "",
+    },
   ])
 
   useEffect(() => {
@@ -44,7 +45,7 @@ const Inventory = () => {
       const grouped = groupByCategory(res.data)
       const initialExpanded = {}
       Object.keys(grouped).forEach((cat) => {
-        initialExpanded[cat] = true
+        initialExpanded[cat] = false
       })
       setExpandedCategories(initialExpanded)
     } catch (err) {
@@ -124,27 +125,27 @@ const Inventory = () => {
         quantity: "",
         ml: "",
         grams: "",
-        costPerUnit: ""
-      }
+        costPerUnit: "",
+      },
     ])
   }
 
   const handleModalSave = async () => {
     try {
       await Promise.all(
-        formItems.map(item =>
+        formItems.map((item) =>
           axios.post("http://localhost:3001/api/ingredients", {
             category: item.category,
             name: item.itemName,
             brand: item.brand,
-            price: parseFloat(item.unitPrice),
-            quantity: parseInt(item.quantity),
+            price: Number.parseFloat(item.unitPrice),
+            quantity: Number.parseInt(item.quantity),
             ml_to_gram_conversion:
-              item.ml && item.grams ? (parseFloat(item.grams) / parseFloat(item.ml)).toFixed(5) : 0,
-            cost_per_gram: parseFloat(item.costPerUnit),
-            purchase_date: new Date().toISOString().split("T")[0]
-          })
-        )
+              item.ml && item.grams ? (Number.parseFloat(item.grams) / Number.parseFloat(item.ml)).toFixed(5) : 0,
+            cost_per_gram: Number.parseFloat(item.costPerUnit),
+            purchase_date: new Date().toISOString().split("T")[0],
+          }),
+        ),
       )
       setShowModal(false)
       setFormItems([
@@ -156,8 +157,8 @@ const Inventory = () => {
           quantity: "",
           ml: "",
           grams: "",
-          costPerUnit: ""
-        }
+          costPerUnit: "",
+        },
       ])
       fetchIngredients()
     } catch (err) {
@@ -169,155 +170,197 @@ const Inventory = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      <header className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg">
-        <div className="container mx-auto px-6 py-4">
-          <h1 className="text-3xl font-bold tracking-wide">BiteUP Inventory</h1>
-        </div>
-      </header>
+      {/* Use the new Navbar component */}
+      <Navbar activeTab="INVENTORY" />
 
       <main className="container mx-auto px-6 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-4xl font-bold text-amber-800">General Inventory</h2>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+          <h2 className="font-[Marcellus] text-8xl sm:text-4xl font-bold text-amber-800">General Inventory</h2>
           <button
             onClick={() => setShowModal(true)}
-            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg transition-all duration-200"
+            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center cursor-pointer space-x-2"
           >
-            ADD NEW +
+            <span>ADD NEW</span>
+            <span className="text-lg">+</span>
           </button>
         </div>
 
         {loading ? (
-          <p className="text-amber-700">Loading...</p>
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+            <p className="text-amber-700 ml-4 text-lg">Loading...</p>
+          </div>
         ) : (
-          Object.entries(groupedData).map(([category, items]) => (
-            <div key={category} className="bg-amber-100 rounded-lg shadow-md overflow-hidden mb-6">
-              <button
-                onClick={() => toggleCategory(category)}
-                className="w-full px-6 py-4 bg-gradient-to-r from-amber-200 to-orange-200 flex justify-between items-center"
-              >
-                <span className="text-lg font-semibold text-amber-900">{category}</span>
-                {expandedCategories[category] ? <ChevronUp /> : <ChevronDown />}
-              </button>
-
-              {expandedCategories[category] && (
-                <div className="p-6">
-                  {items.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-amber-200">
-                          <tr>
-                            <th className="px-4 py-2">Item</th>
-                            <th className="px-4 py-2">Brand</th>
-                            <th className="px-4 py-2">Unit</th>
-                            <th className="px-4 py-2">Price</th>
-                            <th className="px-4 py-2">Qty</th>
-                            <th className="px-4 py-2">ML→G</th>
-                            <th className="px-4 py-2">Cost/g</th>
-                            <th className="px-4 py-2">Purchase Date</th>
-                            <th className="px-4 py-2">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {items.map((item) => {
-                            const isEditing = editRowId === item.ingredient_id
-                            return (
-                              <tr key={item.ingredient_id} className="border-b hover:bg-amber-50">
-                                <td className="px-4 py-2">
-                                  {isEditing ? (
-                                    <input name="name" value={editData.name} onChange={handleChange} />
-                                  ) : (
-                                    item.name
-                                  )}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {isEditing ? (
-                                    <input name="brand" value={editData.brand} onChange={handleChange} />
-                                  ) : (
-                                    item.brand
-                                  )}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {isEditing ? (
-                                    <input name="unit" value={editData.unit} onChange={handleChange} />
-                                  ) : (
-                                    item.unit
-                                  )}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {isEditing ? (
-                                    <input name="price" value={editData.price} onChange={handleChange} />
-                                  ) : (
-                                    `₱${item.price}`
-                                  )}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {isEditing ? (
-                                    <input name="quantity" value={editData.quantity} onChange={handleChange} />
-                                  ) : (
-                                    item.quantity
-                                  )}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {isEditing ? (
-                                    <input
-                                      name="ml_to_gram_conversion"
-                                      value={editData.ml_to_gram_conversion}
-                                      onChange={handleChange}
-                                    />
-                                  ) : (
-                                    item.ml_to_gram_conversion
-                                  )}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {isEditing ? (
-                                    <input
-                                      name="cost_per_gram"
-                                      value={editData.cost_per_gram}
-                                      onChange={handleChange}
-                                    />
-                                  ) : (
-                                    item.cost_per_gram
-                                  )}
-                                </td>
-                                <td className="px-4 py-2">{item.purchase_date}</td>
-                                <td className="px-4 py-2">
-                                  {isEditing ? (
-                                    <button
-                                      onClick={() => handleSave(item.ingredient_id)}
-                                      className="text-green-600 hover:underline"
-                                    >
-                                      Save
-                                    </button>
-                                  ) : (
-                                    <>
-                                      <button
-                                        onClick={() => handleEditClick(item)}
-                                        className="text-amber-600 hover:underline mr-2"
-                                      >
-                                        <Edit size={16} />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDelete(item.ingredient_id)}
-                                        className="text-red-600 hover:underline"
-                                      >
-                                        <Trash2 size={16} />
-                                      </button>
-                                    </>
-                                  )}
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+          <div className="space-y-4">
+            {Object.entries(groupedData).map(([category, items]) => (
+              <div key={category} className="bg-amber-100 rounded-lg shadow-md overflow-hidden">
+                <button
+                  onClick={() => toggleCategory(category)}
+                  className="cursor-pointer w-full px-6 py-4 bg-gradient-to-r from-amber-200 to-orange-200 hover:from-amber-300 hover:to-orange-300 flex justify-between items-center transition-all duration-200"
+                >
+                  <span className="text-lg font-semibold text-amber-900">{category}</span>
+                  {expandedCategories[category] ? (
+                    <ChevronUp className="w-6 h-6 text-amber-700" />
                   ) : (
-                    <p className="text-amber-600">No items available.</p>
+                    <ChevronDown className="w-6 h-6 text-amber-700" />
                   )}
-                </div>
-              )}
-            </div>
-          ))
+                </button>
+
+                {expandedCategories[category] && (
+                  <div className="p-6">
+                    {items.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-amber-200 text-amber-900">
+                              <th className="px-4 py-3 text-left font-semibold">Item</th>
+                              <th className="px-4 py-3 text-left font-semibold">Brand</th>
+                              <th className="px-4 py-3 text-left font-semibold">Unit</th>
+                              <th className="px-4 py-3 text-left font-semibold">Price</th>
+                              <th className="px-4 py-3 text-left font-semibold">Qty</th>
+                              <th className="px-4 py-3 text-left font-semibold">ML→G</th>
+                              <th className="px-4 py-3 text-left font-semibold">Cost/g</th>
+                              <th className="px-4 py-3 text-left font-semibold">Purchase Date</th>
+                              <th className="px-4 py-3 text-left font-semibold">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {items.map((item) => {
+                              const isEditing = editRowId === item.ingredient_id
+                              return (
+                                <tr key={item.ingredient_id} className="border-b border-amber-200 hover:bg-amber-50">
+                                  <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="name"
+                                        value={editData.name}
+                                        onChange={handleChange}
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      item.name
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="brand"
+                                        value={editData.brand}
+                                        onChange={handleChange}
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      item.brand
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="unit"
+                                        value={editData.unit}
+                                        onChange={handleChange}
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      item.unit
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="price"
+                                        value={editData.price}
+                                        onChange={handleChange}
+                                        type="number"
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      `₱${item.price}`
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="quantity"
+                                        value={editData.quantity}
+                                        onChange={handleChange}
+                                        type="number"
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      item.quantity
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="ml_to_gram_conversion"
+                                        value={editData.ml_to_gram_conversion}
+                                        onChange={handleChange}
+                                        type="number"
+                                        step="0.00001"
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      item.ml_to_gram_conversion
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="cost_per_gram"
+                                        value={editData.cost_per_gram}
+                                        onChange={handleChange}
+                                        type="number"
+                                        step="0.00001"
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      item.cost_per_gram
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">{item.purchase_date}</td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex space-x-2">
+                                      {isEditing ? (
+                                        <button
+                                          onClick={() => handleSave(item.ingredient_id)}
+                                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-semibold transition-colors"
+                                        >
+                                          Save
+                                        </button>
+                                      ) : (
+                                        <>
+                                          <button
+                                            onClick={() => handleEditClick(item)}
+                                            className="text-amber-600 hover:text-amber-800 transition-colors"
+                                          >
+                                            <Edit className="w-4 h-4" />
+                                          </button>
+                                          <button
+                                            onClick={() => handleDelete(item.ingredient_id)}
+                                            className="text-red-600 hover:text-red-800 transition-colors"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-amber-700 text-center py-8">No items in this category</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </main>
 
@@ -327,7 +370,10 @@ const Inventory = () => {
           <div className="bg-amber-50 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="bg-gradient-to-r from-amber-200 to-orange-200 px-6 py-4 flex justify-between items-center">
               <h3 className="text-2xl font-bold text-amber-900">ADD NEW ITEM</h3>
-              <button onClick={() => setShowModal(false)} className="text-amber-700 hover:text-amber-900">
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-amber-700 hover:text-amber-900 transition-colors"
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -339,7 +385,10 @@ const Inventory = () => {
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="text-lg font-semibold text-amber-800">Item {index + 1}</h4>
                       {formItems.length > 1 && (
-                        <button onClick={() => removeFormItem(index)} className="text-red-600 hover:text-red-800">
+                        <button
+                          onClick={() => removeFormItem(index)}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                        >
                           <X className="w-5 h-5" />
                         </button>
                       )}
@@ -351,7 +400,7 @@ const Inventory = () => {
                         <select
                           value={item.category}
                           onChange={(e) => updateFormItem(index, "category", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2"
+                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
                         >
                           <option value="">Select Category</option>
                           {categories.map((cat) => (
@@ -367,7 +416,7 @@ const Inventory = () => {
                         <select
                           value={item.itemName}
                           onChange={(e) => updateFormItem(index, "itemName", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2"
+                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
                         >
                           <option value="">Select Item</option>
                           {itemNames.map((name) => (
@@ -383,7 +432,7 @@ const Inventory = () => {
                         <select
                           value={item.brand}
                           onChange={(e) => updateFormItem(index, "brand", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2"
+                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
                         >
                           <option value="">Select Brand</option>
                           {brands.map((brand) => (
@@ -400,7 +449,7 @@ const Inventory = () => {
                           type="number"
                           value={item.unitPrice}
                           onChange={(e) => updateFormItem(index, "unitPrice", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2"
+                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
                           placeholder="0.00"
                         />
                       </div>
@@ -411,7 +460,7 @@ const Inventory = () => {
                           type="number"
                           value={item.quantity}
                           onChange={(e) => updateFormItem(index, "quantity", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2"
+                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
                           placeholder="0"
                         />
                       </div>
@@ -422,7 +471,7 @@ const Inventory = () => {
                           type="number"
                           value={item.ml}
                           onChange={(e) => updateFormItem(index, "ml", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2"
+                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
                           placeholder="0"
                         />
                       </div>
@@ -433,7 +482,7 @@ const Inventory = () => {
                           type="number"
                           value={item.grams}
                           onChange={(e) => updateFormItem(index, "grams", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2"
+                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
                           placeholder="0"
                         />
                       </div>
@@ -444,7 +493,7 @@ const Inventory = () => {
                           type="number"
                           value={item.costPerUnit}
                           onChange={(e) => updateFormItem(index, "costPerUnit", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2"
+                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
                           placeholder="0.00000"
                           step="0.00001"
                         />
@@ -458,13 +507,13 @@ const Inventory = () => {
             <div className="bg-amber-100 px-6 py-4 flex justify-end space-x-4">
               <button
                 onClick={handleModalSave}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold"
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
               >
                 SAVE
               </button>
               <button
                 onClick={addNewFormItem}
-                className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-2 rounded-lg font-semibold"
+                className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-2 rounded-lg font-semibold transition-all"
               >
                 ADD NEW +
               </button>

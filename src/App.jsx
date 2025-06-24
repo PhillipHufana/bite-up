@@ -1,6 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom'; // <-- Import Link
-import logo from './assets/logo.png';
+import { Link } from 'react-router-dom';
 import { ClipboardList, Calculator, FolderOpen, Edit3 } from 'lucide-react';
 
 const App = () => {
@@ -13,7 +12,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-yellow-100 to-blue-100 flex flex-col items-center justify-center text-gray-800">
-      <img src={logo} alt="BiteUP Logo" className="w-96" />
+      <img src="../public/logo.png" alt="BiteUP Logo" className="w-96" />
 
       <h1 className="text-[35px] font-[Marcellus] text-amber-900">Bakery Management System</h1>
       <p className="text-lg text-gray-600 mt-1 mb-10">Hello, Admin! What do you want to do?</p>
