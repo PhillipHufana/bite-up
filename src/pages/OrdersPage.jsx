@@ -25,7 +25,7 @@ const mockOrders = [
   },
   {
     id: "TRC-2025-002",
-    firstName: "Melvine",
+    firstName: "Melvin",
     lastName: "Pasaporte",
     order: "3x Ensaymada, 2x Cinnamon Roll",
     deliveryDate: "01-18-2025",
@@ -65,7 +65,7 @@ export default function OrdersPage() {
         },
         {
           id: "2",
-          name: "Pasaporte, Melvine",
+          name: "Pasaporte, Melvin",
           phone: "0912 345 6789",
           email: "ms@gmail.com",
           address: "TTBDO, Davao City",
