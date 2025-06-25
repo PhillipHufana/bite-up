@@ -56,28 +56,6 @@ app.post("/api/ingredients/bulk", (req, res) => {
 
   const updatedIds = [];
 
-  // Function to generate the next ingredient_id
-  const generateNextId = (callback) => {
-    const prefix = "ING-2025-";
-    const query = "SELECT ingredient_id FROM ingredient ORDER BY ingredient_id DESC LIMIT 1";
-
-    db.query(query, (err, results) => {
-      if (err) return callback(err);
-
-      let nextNumber = 1;
-      if (results.length > 0) {
-        const lastId = results[0].ingredient_id;
-        const match = lastId.match(/\d+$/);
-        if (match) {
-          nextNumber = parseInt(match[0]) + 1;
-        }
-      }
-
-      const formatted = `${prefix}${String(nextNumber).padStart(2, "0")}`;
-      callback(null, formatted);
-    });
-  };
-
   const processItem = (item, callback) => {
     const {
       name,
@@ -135,42 +113,37 @@ app.post("/api/ingredients/bulk", (req, res) => {
           }
         );
       } else {
-        // Insert new with custom ingredient_id
-        generateNextId((idErr, newId) => {
-          if (idErr) return callback(idErr);
+        const insertQuery = `
+          INSERT INTO ingredient 
+          (name, category, brand, unit, price, quantity, ml_to_gram_conversion, cost_per_gram, purchase_date)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
 
-          const insertQuery = `
-            INSERT INTO ingredient 
-            (ingredient_id, name, category, brand, unit, price, quantity, ml_to_gram_conversion, cost_per_gram, purchase_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-
-          db.query(
-            insertQuery,
-            [
-              newId,
-              name,
-              category,
-              brand,
-              unit,
-              parseFloat(price),
-              parseInt(quantity),
-              parseFloat(ml_to_gram_conversion) || 0,
-              parseFloat(cost_per_gram) || 0,
-              purchase_date || new Date().toISOString().split("T")[0],
-            ],
-            (insertErr, result) => {
-              if (!insertErr) {
-                updatedIds.push(newId); // track for highlight if needed
-              }
-              callback(insertErr);
+        db.query(
+          insertQuery,
+          [
+            name,
+            category,
+            brand,
+            unit,
+            parseFloat(price),
+            parseInt(quantity),
+            parseFloat(ml_to_gram_conversion) || 0,
+            parseFloat(cost_per_gram) || 0,
+            purchase_date || new Date().toISOString().split("T")[0],
+          ],
+          (insertErr, result) => {
+            if (!insertErr) {
+              // optionally push result.insertId if you want
             }
-          );
-        });
+            callback(insertErr);
+          }
+        );
       }
     });
   };
 
+  // Sequential processing using recursion (to avoid async nesting hell)
   const processAll = (index = 0) => {
     if (index >= items.length) {
       return res.status(200).json({ success: true, updatedIds });
@@ -261,7 +234,6 @@ app.delete("/api/ingredients/:id", (req, res) => {
     res.json({ success: true });
   });
 });
-
 
 // Start server
 app.listen(PORT, () => {
