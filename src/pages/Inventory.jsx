@@ -12,18 +12,22 @@ const Inventory = () => {
   const [editData, setEditData] = useState({})
   const [expandedCategories, setExpandedCategories] = useState({})
   const [showModal, setShowModal] = useState(false)
+  const [highlightedRowId, setHighlightedRowId] = useState({});
+  const [deletingId, setDeletingId] = useState(null);
 
-  // Dropdown placeholder values
-  const categories = ["Meat", "Vegetables", "Condiments", "Dairy"]
-  const itemNames = ["Chicken", "Tomato", "Salt", "Milk"]
+  const categories = ["Additives, Improvers, Leaveners", "Alcohol", "Butter, Margarine, Shortening", "Cereals, Grinds, Flakes", "Cheese (Cream Cheese)",
+    "Cheese (General)", "Chocolates", "Cocoa Powder", "Cooking Oils", "Egg & Egg Powder", "Flavorings and Food Color", "Flour and Starches", "Fondant and Gumpaste", 
+    "Fruits, Fillings", "Milk (Condensed/Condensada)", "Milk (Creams, Yogurt)", "Milk (Evaporated)", "Milk (Fresh)", "Milk (Powder)", "Nuts", "Other", "Salt, Seasonings & Spices", 
+    "Spreads", "Sweeteners", "Syrups", "Added Ingredients"]
   const brands = ["Brand A", "Brand B", "Brand C"]
 
-  // Form state for modal
+  //Form state for modal
   const [formItems, setFormItems] = useState([
     {
       category: "",
       itemName: "",
       brand: "",
+      unit: "",
       unitPrice: "",
       quantity: "",
       ml: "",
@@ -62,7 +66,7 @@ const Inventory = () => {
     }, {})
   }
 
-  const toggleCategory = (category) => {
+const toggleCategory = (category) => {
     setExpandedCategories((prev) => ({
       ...prev,
       [category]: !prev[category],
@@ -89,19 +93,27 @@ const Inventory = () => {
     }
   }
 
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this item?")
-    if (!confirmDelete) return
-
-    try {
-      await axios.delete(`http://localhost:3001/api/ingredients/${id}`)
-      setIngredients((prev) => prev.filter((item) => item.ingredient_id !== id))
-    } catch (err) {
-      console.error("Delete failed:", err)
-    }
+    const handleDelete = async (id) => {
+  if (!id || typeof id !== "string") {
+    console.warn("Invalid ingredient_id:", id);
+    return;
   }
 
-  // Modal Form Handlers
+  if (window.confirm("Are you sure you want to delete this item?")) {
+    try {
+      setDeletingId(id); // Start loading
+      await axios.delete(`http://localhost:3001/api/ingredients/${id}`);
+      await fetchIngredients(); // Refresh UI
+    } catch (err) {
+      console.error("Delete failed:", err.response?.data?.error || err.message);
+      alert(`Error: ${err.response?.data?.error || "Check console for details"}`);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+};
+
+  //Modal Form Handlers
   const updateFormItem = (index, field, value) => {
     const updatedItems = [...formItems]
     updatedItems[index][field] = value
@@ -121,6 +133,7 @@ const Inventory = () => {
         category: "",
         itemName: "",
         brand: "",
+        unit: "",
         unitPrice: "",
         quantity: "",
         ml: "",
@@ -131,40 +144,54 @@ const Inventory = () => {
   }
 
   const handleModalSave = async () => {
-    try {
-      await Promise.all(
-        formItems.map((item) =>
-          axios.post("http://localhost:3001/api/ingredients", {
-            category: item.category,
-            name: item.itemName,
-            brand: item.brand,
-            price: Number.parseFloat(item.unitPrice),
-            quantity: Number.parseInt(item.quantity),
-            ml_to_gram_conversion:
-              item.ml && item.grams ? (Number.parseFloat(item.grams) / Number.parseFloat(item.ml)).toFixed(5) : 0,
-            cost_per_gram: Number.parseFloat(item.costPerUnit),
-            purchase_date: new Date().toISOString().split("T")[0],
-          }),
-        ),
-      )
-      setShowModal(false)
-      setFormItems([
-        {
-          category: "",
-          itemName: "",
-          brand: "",
-          unitPrice: "",
-          quantity: "",
-          ml: "",
-          grams: "",
-          costPerUnit: "",
-        },
-      ])
-      fetchIngredients()
-    } catch (err) {
-      console.error("Error saving new items:", err)
+  try {
+    if (!formItems || formItems.length === 0) return;
+
+    const response = await axios.post("http://localhost:3001/api/ingredients/bulk", {
+      items: formItems.map((item) => ({
+        category: item.category,
+        name: item.itemName,
+        brand: item.brand,
+        unit: item.unit || "unit",
+        price: parseFloat(item.unitPrice),
+        quantity: parseInt(item.quantity),
+        ml_to_gram_conversion:
+          item.ml && item.grams
+            ? (parseFloat(item.grams) / parseFloat(item.ml)).toFixed(5)
+            : 0,
+        cost_per_gram: parseFloat(item.costPerUnit) || 0,
+        purchase_date: new Date().toISOString().split("T")[0],
+      })),
+    });
+
+    const updatedIds = response.data.updatedIds || [];
+
+    if (updatedIds.length > 0) {
+      setHighlightedRowId(updatedIds); // pass full array
     }
+
+
+
+    setShowModal(false);
+    setFormItems([
+      {
+        category: "",
+        itemName: "",
+        brand: "",
+        unit: "",
+        unitPrice: "",
+        quantity: "",
+        ml: "",
+        grams: "",
+        costPerUnit: "",
+      },
+    ]);
+
+    fetchIngredients();
+  } catch (err) {
+    console.error("Error saving multiple items:", err);
   }
+};
 
   const groupedData = groupByCategory(ingredients)
 
@@ -226,9 +253,18 @@ const Inventory = () => {
                           </thead>
                           <tbody>
                             {items.map((item) => {
-                              const isEditing = editRowId === item.ingredient_id
-                              return (
-                                <tr key={item.ingredient_id} className="border-b border-amber-200 hover:bg-amber-50">
+                              const isEditing = editRowId === item.ingredient_id;
+                            return (
+                              <tr
+                                key={item.ingredient_id}
+                                className={
+                                Array.isArray(highlightedRowId) && highlightedRowId.includes(item.ingredient_id)
+                                ? "bg-yellow-200 transition-colors duration-300"
+                          : ""
+                                }
+    >
+
+
                                   <td className="px-4 py-3">
                                     {isEditing ? (
                                       <input
@@ -339,9 +375,12 @@ const Inventory = () => {
                                           </button>
                                           <button
                                             onClick={() => handleDelete(item.ingredient_id)}
-                                            className="text-red-600 hover:text-red-800 transition-colors"
-                                          >
-                                            <Trash2 className="w-4 h-4" />
+                                              className="text-red-600 hover:text-red-800 transition-colors">
+                                              {deletingId === item.ingredient_id ? (
+                                              <span className="text-xs text-gray-500 animate-pulse">Deleting...</span>
+                                            ) : (
+                                              <Trash2 className="w-4 h-4" />
+                                            )}
                                           </button>
                                         </>
                                       )}
@@ -413,18 +452,13 @@ const Inventory = () => {
 
                       <div>
                         <label className="block text-sm font-medium text-amber-800 mb-2">Item Name:</label>
-                        <select
+                        <input
+                          type="string"
                           value={item.itemName}
                           onChange={(e) => updateFormItem(index, "itemName", e.target.value)}
                           className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        >
-                          <option value="">Select Item</option>
-                          {itemNames.map((name) => (
-                            <option key={name} value={name}>
-                              {name}
-                            </option>
-                          ))}
-                        </select>
+                          placeholder="Item Name"
+                        />
                       </div>
 
                       <div>
@@ -506,11 +540,13 @@ const Inventory = () => {
 
             <div className="bg-amber-100 px-6 py-4 flex justify-end space-x-4">
               <button
-                onClick={handleModalSave}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-              >
-                SAVE
+                  type="button"
+                  onClick={handleModalSave}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+                >
+                  SAVE
               </button>
+
               <button
                 onClick={addNewFormItem}
                 className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-2 rounded-lg font-semibold transition-all"
