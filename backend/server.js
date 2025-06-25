@@ -29,7 +29,7 @@ app.get("/api/ping", (req, res) => {
   res.send("pong");
 });
 
-
+// GET all ingredients
 app.get("/api/ingredients", (req, res) => {
   const query = `
     SELECT 
@@ -41,53 +41,101 @@ app.get("/api/ingredients", (req, res) => {
   db.query(query, (err, results) => {
     if (err) {
       console.error("MySQL Query Error:", err);
-      return res.status(500).json({ error: err });
+      return res.status(500).json({ error: err.message });
     }
-    console.log("Data fetched:", results.length, "row(s)");
     res.json(results);
   });
 });
 
-//create ingredients module
-app.post("/api/ingredients", (req, res) => {
+// UPDATE ingredient
+app.put("/api/ingredients/:id", (req, res) => {
+  const { id } = req.params;
   const {
     name,
-    category,
     brand,
     unit,
     price,
     quantity,
     ml_to_gram_conversion,
     cost_per_gram,
-    purchase_date
+    purchase_date,
+  } = req.body;
+
+  const query = `
+    UPDATE ingredient 
+    SET name = ?, brand = ?, unit = ?, price = ?, quantity = ?, 
+        ml_to_gram_conversion = ?, cost_per_gram = ?, purchase_date = ?
+    WHERE ingredient_id = ?
+  `;
+
+  db.query(
+    query,
+    [
+      name,
+      brand,
+      unit,
+      price,
+      quantity,
+      ml_to_gram_conversion,
+      cost_per_gram,
+      purchase_date,
+      id,
+    ],
+    (err, result) => {
+      if (err) {
+        console.error("Update Error:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+// DELETE ingredient by ID
+app.delete("/api/ingredients/:id", (req, res) => {
+  const { id } = req.params;
+  const query = "DELETE FROM ingredient WHERE ingredient_id = ?";
+  
+  db.query(query, [id], (err, result) => {
+    if (err) {
+      console.error("Delete Error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+    
+    res.json({ success: true });
+  });
+});
+
+// POST new ingredient
+app.post("/api/ingredients", (req, res) => {
+  const {
+    category, name, brand, price, quantity,
+    ml_to_gram_conversion, cost_per_gram, purchase_date
   } = req.body;
 
   const query = `
     INSERT INTO ingredient 
-    (name, category, brand, unit, price, quantity, ml_to_gram_conversion, cost_per_gram, purchase_date)
+    (category, name, brand, unit, price, quantity, ml_to_gram_conversion, cost_per_gram, purchase_date)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
-  const values = [
-    name,
-    category,
-    brand,
-    unit,
-    price,
-    quantity,
-    ml_to_gram_conversion,
-    cost_per_gram,
-    purchase_date
-  ];
-
-  db.query(query, values, (err, result) => {
-    if (err) {
-      console.error("MySQL Insert Error:", err);
-      return res.status(500).json({ error: "Failed to save ingredient" });
+  db.query(
+    query,
+    [category, name, brand, "unit", price, quantity, ml_to_gram_conversion, cost_per_gram, purchase_date],
+    (err, result) => {
+      if (err) {
+        console.error("Insert Error:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ success: true, ingredient_id: result.insertId });
     }
-    res.status(201).json({ message: "Ingredient created successfully" });
-  });
+  );
 });
+
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
