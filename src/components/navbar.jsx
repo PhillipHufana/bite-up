@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { Menu, X, ShoppingCart, Calculator, Package, FileText } from "lucide-react"
@@ -13,12 +11,12 @@ const Navbar = ({ activeTab = "INVENTORY" }) => {
     {
       name: "ORDER",
       icon: ShoppingCart,
-      path: "/order",
+      path: "/orders",
     },
     {
       name: "COSTING",
       icon: Calculator,
-      path: "/costing",
+      path: "/costingcalculator",
     },
     {
       name: "INVENTORY",

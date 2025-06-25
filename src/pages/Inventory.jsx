@@ -197,7 +197,8 @@ const toggleCategory = (category) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      {/* Use the new Navbar component */}
+      
+      {/* Adds the Navbar component */}
       <Navbar activeTab="INVENTORY" />
 
       <main className="container mx-auto px-6 py-8">
