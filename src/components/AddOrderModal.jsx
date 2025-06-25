@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import Button from "./ui/Button.jsx";
 import Input from "./ui/Input.jsx";
 import Label from "./ui/Label.jsx";
@@ -21,29 +22,39 @@ export default function AddOrderModal({
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    deliveryDate: "",
+    orderDate: "",
   });
   const [orderItems, setOrderItems] = useState([
     { id: "1", name: "", quantity: 1, price: 0 },
   ]);
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [customerNotFound, setCustomerNotFound] = useState(false);
+
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const res = await axios.get("/api/orders/products");
+        setProducts(res.data);
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+      }
+    }
+    fetchProducts();
+  }, []);
 
   const handleNameSearch = (firstName, lastName) => {
-    if (firstName.length > 0 || lastName.length > 0) {
-      const results = customers.filter((customer) => {
-        const fullName = customer.name.toLowerCase();
-        const searchFirst = firstName.toLowerCase();
-        const searchLast = lastName.toLowerCase();
-
-        return fullName.includes(searchFirst) && fullName.includes(searchLast);
-      });
-      setSearchResults(results);
-      setShowResults(true);
-    } else {
-      setSearchResults([]);
-      setShowResults(false);
-    }
+    const results = customers.filter((c) => {
+      const fullName = c.name.toLowerCase();
+      return (
+        fullName.includes(firstName.toLowerCase()) &&
+        fullName.includes(lastName.toLowerCase())
+      );
+    });
+    setSearchResults(results);
+    setShowResults(true);
+    setCustomerNotFound(results.length === 0 && (firstName || lastName));
   };
 
   const handleFirstNameChange = (value) => {
@@ -64,16 +75,14 @@ export default function AddOrderModal({
       lastName: lastName || "",
     });
     setShowResults(false);
+    setCustomerNotFound(false);
   };
 
   const addOrderItem = () => {
-    const newItem = {
-      id: Date.now().toString(),
-      name: "",
-      quantity: 1,
-      price: 0,
-    };
-    setOrderItems([...orderItems, newItem]);
+    setOrderItems([
+      ...orderItems,
+      { id: Date.now().toString(), name: "", quantity: 1, price: 0 },
+    ]);
   };
 
   const removeOrderItem = (id) => {
@@ -83,10 +92,20 @@ export default function AddOrderModal({
   };
 
   const updateOrderItem = (id, field, value) => {
-    setOrderItems(
-      orderItems.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
+    setOrderItems((prevItems) =>
+      prevItems.map((item) => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value };
+          if (field === "name") {
+            const match = products.find(
+              (p) => p.name.toLowerCase() === value.toLowerCase()
+            );
+            if (match) updatedItem.price = match.unit_cost;
+          }
+          return updatedItem;
+        }
+        return item;
+      })
     );
   };
 
@@ -97,60 +116,51 @@ export default function AddOrderModal({
     );
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check if customer exists
-    const customerExists = customers.some((customer) => {
-      const fullName = customer.name.toLowerCase();
-      const searchName = `${formData.lastName.toLowerCase()}, ${formData.firstName.toLowerCase()}`;
+    const customer = customers.find((c) => {
+      const fullName = c.name.toLowerCase();
       return (
-        fullName === searchName ||
-        (fullName.includes(formData.firstName.toLowerCase()) &&
-          fullName.includes(formData.lastName.toLowerCase()))
+        fullName.includes(formData.firstName.toLowerCase()) &&
+        fullName.includes(formData.lastName.toLowerCase())
       );
     });
 
-    if (!customerExists) {
-      alert(
-        "Customer not found! Please add the customer to the Customer Profile first."
-      );
+    if (!customer) {
+      alert("Customer not found! Please add them to the Customer Profile.");
       return;
     }
 
-    // Validate order items
-    const validItems = orderItems.filter(
-      (item) => item.name.trim() !== "" && item.quantity > 0 && item.price > 0
-    );
+    const validItems = orderItems.filter((i) => {
+      return (
+        i.name &&
+        i.quantity > 0 &&
+        products.some((p) => p.name.toLowerCase() === i.name.toLowerCase())
+      );
+    });
+
     if (validItems.length === 0) {
-      alert("Please add at least one valid order item.");
+      alert(
+        "Please add valid products. Only products that exist in the system are accepted."
+      );
       return;
     }
 
-    const total = calculateTotal();
-    const orderDescription = validItems
-      .map((item) => `${item.quantity}x ${item.name}`)
-      .join(", ");
-
-    const newOrder = {
-      ...formData,
-      order: orderDescription,
-      orderItems: validItems,
-      total: `P ${total.toFixed(2)}`,
-      status: "Pending",
-    };
-
-    onAddOrder(newOrder);
-
-    // Reset form
-    setFormData({
-      firstName: "",
-      lastName: "",
-      deliveryDate: "",
-    });
-    setOrderItems([{ id: "1", name: "", quantity: 1, price: 0 }]);
-    setSearchResults([]);
-    setShowResults(false);
+    try {
+      const payload = {
+        customer_id: customer.id,
+        orderItems: validItems,
+        total_amount: calculateTotal(),
+        order_date: formData.orderDate,
+      };
+      await axios.post("/api/orders", payload);
+      onAddOrder();
+      onClose();
+    } catch (err) {
+      console.error("Order submission failed:", err);
+      alert("Failed to save order.");
+    }
   };
 
   return (
@@ -167,74 +177,64 @@ export default function AddOrderModal({
             ADD NEW ORDER
           </DialogTitle>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Customer Fields */}
           <div className="grid grid-cols-2 gap-4 relative">
             <div>
-              <Label className="font-poppins" style={{ color: "#000000" }}>
-                Customer's First Name
-              </Label>
+              <Label className="font-poppins">Customer's First Name</Label>
               <Input
                 value={formData.firstName}
                 onChange={(e) => handleFirstNameChange(e.target.value)}
-                className="bg-[#D9D9D9] border-none"
+                className={`bg-[#D9D9D9] border-none ${
+                  customerNotFound ? "ring-2 ring-red-400" : ""
+                }`}
                 required
               />
             </div>
             <div>
-              <Label className="font-poppins" style={{ color: "#000000" }}>
-                Customer's Last Name
-              </Label>
+              <Label className="font-poppins">Customer's Last Name</Label>
               <Input
                 value={formData.lastName}
                 onChange={(e) => handleLastNameChange(e.target.value)}
-                className="bg-[#D9D9D9] border-none"
+                className={`bg-[#D9D9D9] border-none ${
+                  customerNotFound ? "ring-2 ring-red-400" : ""
+                }`}
                 required
               />
             </div>
 
-            {/* Search Results Dropdown */}
-            {showResults && searchResults.length > 0 && (
+            {showResults && (
               <div className="absolute top-full left-0 right-0 z-10 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                {searchResults.map((customer) => (
-                  <div
-                    key={customer.id}
-                    className="p-2 hover:bg-gray-100 cursor-pointer font-poppins"
-                    onClick={() => selectCustomer(customer)}
-                  >
-                    {customer.name}
+                {searchResults.length > 0 ? (
+                  searchResults.map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="p-2 hover:bg-gray-100 cursor-pointer font-poppins"
+                      onClick={() => selectCustomer(customer)}
+                    >
+                      {customer.name}
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-2 text-red-600 font-poppins">
+                    Customer not found! Add them in the Customer Profile first.
                   </div>
-                ))}
+                )}
               </div>
             )}
-
-            {showResults &&
-              searchResults.length === 0 &&
-              formData.firstName &&
-              formData.lastName && (
-                <div className="absolute top-full left-0 right-0 z-10 bg-red-100 border border-red-300 rounded-md p-2">
-                  <p className="text-red-600 font-poppins text-sm">
-                    Customer not found! Please add to Customer Profile first.
-                  </p>
-                </div>
-              )}
           </div>
 
-          {/* Order Items Section */}
+          {/* Order Items */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <Label
-                className="font-poppins text-lg"
-                style={{ color: "#000000" }}
-              >
-                Order Items
-              </Label>
+              <Label className="font-poppins text-lg">Order Items</Label>
               <Button
                 type="button"
                 onClick={addOrderItem}
                 className="bg-[#C1801C] hover:bg-[#A6670F] text-white px-3 py-1 rounded-full font-poppins text-sm"
               >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Item
+                <Plus className="w-4 h-4 mr-1" /> Add Item
               </Button>
             </div>
 
@@ -244,10 +244,7 @@ export default function AddOrderModal({
                 className="bg-[#D9D9D9] rounded-lg p-4 space-y-3"
               >
                 <div className="flex justify-between items-center">
-                  <span
-                    className="font-poppins font-semibold"
-                    style={{ color: "#000000" }}
-                  >
+                  <span className="font-poppins font-semibold">
                     Item {index + 1}
                   </span>
                   {orderItems.length > 1 && (
@@ -260,32 +257,26 @@ export default function AddOrderModal({
                     </Button>
                   )}
                 </div>
-
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <Label
-                      className="font-poppins text-sm"
-                      style={{ color: "#444444" }}
-                    >
-                      Item Name
-                    </Label>
-                    <Input
+                    <Label className="font-poppins text-sm">Item Name</Label>
+                    <input
+                      list={`products-${item.id}`}
                       value={item.name}
                       onChange={(e) =>
                         updateOrderItem(item.id, "name", e.target.value)
                       }
-                      className="bg-white border-gray-300"
-                      placeholder="e.g., Cinnamon Roll"
+                      className="bg-white border border-gray-300 rounded-md p-2 w-full"
                       required
                     />
+                    <datalist id={`products-${item.id}`}>
+                      {products.map((p, idx) => (
+                        <option key={idx} value={p.name} />
+                      ))}
+                    </datalist>
                   </div>
                   <div>
-                    <Label
-                      className="font-poppins text-sm"
-                      style={{ color: "#444444" }}
-                    >
-                      Quantity
-                    </Label>
+                    <Label className="font-poppins text-sm">Quantity</Label>
                     <Input
                       type="number"
                       min="1"
@@ -294,7 +285,7 @@ export default function AddOrderModal({
                         updateOrderItem(
                           item.id,
                           "quantity",
-                          Number.parseInt(e.target.value) || 1
+                          parseInt(e.target.value) || 1
                         )
                       }
                       className="bg-white border-gray-300"
@@ -302,49 +293,24 @@ export default function AddOrderModal({
                     />
                   </div>
                   <div>
-                    <Label
-                      className="font-poppins text-sm"
-                      style={{ color: "#444444" }}
-                    >
-                      Price (each)
-                    </Label>
+                    <Label className="font-poppins text-sm">Price</Label>
                     <Input
                       type="number"
                       min="0"
                       step="0.01"
                       value={item.price}
-                      onChange={(e) =>
-                        updateOrderItem(
-                          item.id,
-                          "price",
-                          Number.parseFloat(e.target.value) || 0
-                        )
-                      }
-                      className="bg-white border-gray-300"
-                      placeholder="0.00"
+                      readOnly
+                      className="bg-white border-gray-300 text-gray-600"
                       required
                     />
                   </div>
                 </div>
-
-                <div className="text-right">
-                  <span
-                    className="font-poppins font-semibold"
-                    style={{ color: "#000000" }}
-                  >
-                    Subtotal: P {(item.quantity * item.price).toFixed(2)}
-                  </span>
-                </div>
               </div>
             ))}
 
-            {/* Total */}
             <div className="bg-[#D9D9D9] rounded-lg p-4">
               <div className="flex justify-between items-center">
-                <span
-                  className="font-poppins text-lg font-semibold"
-                  style={{ color: "#000000" }}
-                >
+                <span className="font-poppins text-lg font-semibold">
                   Total Amount:
                 </span>
                 <span className="font-poppins text-xl font-bold text-green-600">
@@ -355,14 +321,12 @@ export default function AddOrderModal({
           </div>
 
           <div>
-            <Label className="font-poppins" style={{ color: "#000000" }}>
-              Delivery Date
-            </Label>
+            <Label className="font-poppins">Order Date</Label>
             <Input
               type="date"
-              value={formData.deliveryDate}
+              value={formData.orderDate}
               onChange={(e) =>
-                setFormData({ ...formData, deliveryDate: e.target.value })
+                setFormData({ ...formData, orderDate: e.target.value })
               }
               className="bg-[#D9D9D9] border-none"
               required

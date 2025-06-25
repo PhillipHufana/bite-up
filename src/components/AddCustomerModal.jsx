@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import axios from "axios";
 import Button from "./ui/Button.jsx";
 import Input from "./ui/Input.jsx";
 import Label from "./ui/Label.jsx";
@@ -11,7 +12,7 @@ import {
   DialogTitle,
 } from "./ui/Dialog.jsx";
 
-export default function AddCustomerModal({ isOpen, onClose, onAddCustomer }) {
+export default function AddCustomerModal({ isOpen, onClose, fetchCustomers }) {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -20,30 +21,31 @@ export default function AddCustomerModal({ isOpen, onClose, onAddCustomer }) {
     email: "",
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newCustomer = {
-      name: `${formData.lastName}, ${formData.firstName}`,
-      phone: formData.phone,
-      email: formData.email,
-      address: formData.address,
-      customerSince: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-      totalOrders: 0,
-      totalSpent: "P 0.00",
-      orderHistory: [],
-    };
-    onAddCustomer(newCustomer);
-    setFormData({
-      firstName: "",
-      lastName: "",
-      address: "",
-      phone: "",
-      email: "",
-    });
+
+    try {
+      await axios.post("/api/customer", {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        address: formData.address,
+        contact_number: formData.phone,
+        email: formData.email,
+      });
+
+      setFormData({
+        firstName: "",
+        lastName: "",
+        address: "",
+        phone: "",
+        email: "",
+      });
+
+      onClose();
+      fetchCustomers(); // Refresh customer table
+    } catch (error) {
+      console.error("Failed to add customer:", error);
+    }
   };
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import axios from "axios";
 import Button from "../components/ui/Button.jsx";
 import Input from "../components/ui/Input.jsx";
 import {
@@ -12,209 +13,103 @@ import {
 } from "../components/ui/Select.jsx";
 import AddOrderModal from "../components/AddOrderModal.jsx";
 
-const mockOrders = [
-  {
-    id: "TRC-2025-001",
-    firstName: "Gracie",
-    lastName: "Abot",
-    order: "2x Chocolate Cake, 1x Vanilla Cupcake",
-    deliveryDate: "01-18-2025",
-    customerId: "1",
-    total: "P 350.00",
-    status: "Completed",
-  },
-  {
-    id: "TRC-2025-002",
-    firstName: "Melvin",
-    lastName: "Pasaporte",
-    order: "3x Ensaymada, 2x Cinnamon Roll",
-    deliveryDate: "01-18-2025",
-    customerId: "2",
-    total: "P 250.00",
-    status: "Completed",
-  },
-];
-
 export default function OrdersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [orders, setOrders] = useState(mockOrders);
+  const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState(mockOrders);
+  const [filteredOrders, setFilteredOrders] = useState([]);
   const [filterDate, setFilterDate] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [orderBy, setOrderBy] = useState("newest");
 
-  // Load customers from localStorage or use mock data
-  useEffect(() => {
-    const savedCustomers = localStorage.getItem("biteup-customers");
-    if (savedCustomers) {
-      setCustomers(JSON.parse(savedCustomers));
-    } else {
-      // Mock customers data
-      const mockCustomers = [
-        {
-          id: "1",
-          name: "Abot, Gracie",
-          phone: "0912 345 6789",
-          email: "grabot@gmail.com",
-          address: "Sitio Basak, Mintal, Davao City",
-          customerSince: "November 11, 2024",
-          totalOrders: 1,
-          totalSpent: "P 350.00",
-          orderHistory: [],
-        },
-        {
-          id: "2",
-          name: "Pasaporte, Melvin",
-          phone: "0912 345 6789",
-          email: "ms@gmail.com",
-          address: "TTBDO, Davao City",
-          customerSince: "January 23, 2025",
-          totalOrders: 1,
-          totalSpent: "P 3,250.00",
-          orderHistory: [],
-        },
-      ];
-      setCustomers(mockCustomers);
-      localStorage.setItem("biteup-customers", JSON.stringify(mockCustomers));
+  const fetchOrders = async () => {
+    try {
+      const res = await axios.get("/api/orders");
+      const formatted = res.data.map((order) => {
+        const dateObj = new Date(order.delivery_date);
+        return {
+          id: order.id,
+          customerId: order.customer_id,
+          firstName: order.first_name,
+          lastName: order.last_name,
+          order: order.order_name,
+          deliveryDate: isNaN(dateObj)
+            ? "Invalid date"
+            : dateObj.toLocaleDateString("en-GB"),
+          total: `P ${parseFloat(order.total || 0).toFixed(2)}`,
+          status: order.status || "Completed",
+        };
+      });
+
+      setOrders(formatted);
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
     }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const res = await axios.get("/api/customer");
+      const data = res.data.map((cust) => ({
+        id: cust.customer_id,
+        name: `${cust.last_name}, ${cust.first_name}`,
+        phone: cust.contact_number,
+        email: cust.email,
+        address: cust.address,
+      }));
+      setCustomers(data);
+    } catch (err) {
+      console.error("Failed to fetch customers:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    fetchCustomers();
   }, []);
 
-  // Apply filters and sorting
   useEffect(() => {
     let filtered = [...orders];
-
-    // Filter by date
     if (filterDate) {
       filtered = filtered.filter((order) => {
         const orderDate = new Date(
-          order.deliveryDate.split("-").reverse().join("-")
+          order.deliveryDate.split("/").reverse().join("-")
         );
         const filterDateObj = new Date(filterDate);
         return orderDate.toDateString() === filterDateObj.toDateString();
       });
     }
-
-    // Sort
     filtered.sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortBy) {
-        case "name":
-          comparison = a.lastName.localeCompare(b.lastName);
-          break;
-        case "date":
-          const dateA = new Date(a.deliveryDate.split("-").reverse().join("-"));
-          const dateB = new Date(b.deliveryDate.split("-").reverse().join("-"));
-          comparison = dateA.getTime() - dateB.getTime();
-          break;
-        case "order":
-          comparison = a.order.localeCompare(b.order);
-          break;
-        default:
-          comparison = 0;
-      }
-
-      return orderBy === "newest" ? -comparison : comparison;
+      let comp = 0;
+      if (sortBy === "name") comp = a.lastName.localeCompare(b.lastName);
+      else if (sortBy === "date")
+        comp = new Date(a.deliveryDate) - new Date(b.deliveryDate);
+      else if (sortBy === "cost")
+        comp =
+          parseFloat(a.total.replace("P ", "")) -
+          parseFloat(b.total.replace("P ", ""));
+      return orderBy === "newest" ? -comp : comp;
     });
-
     setFilteredOrders(filtered);
   }, [orders, filterDate, sortBy, orderBy]);
 
-  const handleAddOrder = (newOrder) => {
-    // Check if customer exists
-    const customer = customers.find(
-      (c) =>
-        c.name.toLowerCase().includes(newOrder.firstName.toLowerCase()) &&
-        c.name.toLowerCase().includes(newOrder.lastName.toLowerCase())
-    );
-
-    if (!customer) {
-      alert(
-        "Customer not found! Please add the customer to the Customer Profile first."
-      );
-      return;
-    }
-
-    // Add order
-    const orderWithId = {
-      ...newOrder,
-      id: `TRC-2025-${String(Date.now()).slice(-3)}`,
-      customerId: customer.id,
-    };
-
-    const updatedOrders = [...orders, orderWithId];
-    setOrders(updatedOrders);
-
-    // Update customer's order history
-    const updatedCustomers = customers.map((c) => {
-      if (c.id === customer.id) {
-        const newOrderHistory = {
-          orderCode: orderWithId.id,
-          date: new Date().toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          items: newOrder.orderItems
-            ? newOrder.orderItems.map(
-                (item) => `${item.quantity}x ${item.name}`
-              )
-            : [newOrder.order],
-          itemCosts: newOrder.orderItems
-            ? newOrder.orderItems.map(
-                (item) => `P ${(item.quantity * item.price).toFixed(2)}`
-              )
-            : [newOrder.total],
-          total: newOrder.total,
-          status: "Completed",
-        };
-
-        const totalSpentNum = Number.parseFloat(
-          c.totalSpent.replace("P ", "").replace(",", "")
-        );
-        const newOrderTotal = Number.parseFloat(
-          newOrder.total.replace("P ", "").replace(",", "")
-        );
-
-        return {
-          ...c,
-          totalOrders: c.totalOrders + 1,
-          totalSpent: `P ${(totalSpentNum + newOrderTotal).toFixed(2)}`,
-          orderHistory: [...c.orderHistory, newOrderHistory],
-        };
-      }
-      return c;
-    });
-
-    setCustomers(updatedCustomers);
-    localStorage.setItem("biteup-customers", JSON.stringify(updatedCustomers));
-    setIsModalOpen(false);
-  };
-
   return (
     <div className="space-y-6">
-      {/* Title - Outside the container */}
       <h1 className="text-4xl font-marcellus" style={{ color: "#444444" }}>
         Orders
       </h1>
 
-      {/* Main Content Container - Increased border radius */}
       <div>
-        {/* Add Order Button */}
         <div className="flex justify-end mb-8">
           <Button
             onClick={() => setIsModalOpen(true)}
-            className="text-white px-6 py-2 rounded-full font-poppins transition-all duration-300"
+            className="text-white px-6 py-2 rounded-full font-poppins"
             style={{ backgroundColor: "#C1801C" }}
           >
             ADD ORDER +
           </Button>
         </div>
 
-        {/* Filters */}
         <div
           className="border-2 rounded-xl p-6 mb-6"
           style={{ borderColor: "#3F331F" }}
@@ -272,13 +167,12 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* Orders Table - Updated colors with specified opacity */}
         <div className="rounded-xl overflow-hidden">
           <table className="w-full">
             <thead style={{ backgroundColor: "rgba(68, 68, 68, 0.59)" }}>
               <tr>
                 <th className="px-6 py-4 text-left font-poppins font-semibold text-white">
-                  Transaction Number
+                  Order Number
                 </th>
                 <th className="px-6 py-4 text-left font-poppins font-semibold text-white">
                   First Name
@@ -293,16 +187,16 @@ export default function OrdersPage() {
                   Total
                 </th>
                 <th className="px-6 py-4 text-left font-poppins font-semibold text-white">
-                  Delivery Date
+                  Order Date
                 </th>
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map((order, index) => (
+              {filteredOrders.map((order) => (
                 <tr
                   key={order.id}
                   style={{ backgroundColor: "rgba(68, 68, 68, 0.15)" }}
-                  className="border-b border-gray-300 hover:bg-opacity-25 transition-colors duration-200"
+                  className="border-b border-gray-300 hover:bg-opacity-25"
                 >
                   <td
                     className="px-6 py-4 font-poppins"
@@ -328,7 +222,7 @@ export default function OrdersPage() {
                   >
                     {order.order}
                   </td>
-                  <td className="px-6 py-4 font-poppins font-semibold text-green-600">
+                  <td className="px-6 py-4 font-poppins text-green-600 font-semibold">
                     {order.total}
                   </td>
                   <td
@@ -347,7 +241,7 @@ export default function OrdersPage() {
       <AddOrderModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onAddOrder={handleAddOrder}
+        onAddOrder={fetchOrders}
         customers={customers}
       />
     </div>
