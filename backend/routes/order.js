@@ -58,7 +58,9 @@ router.post("/", async (req, res) => {
       WHERE order_id LIKE 'ORD-${year}-%'
       ORDER BY order_id DESC LIMIT 1
     `);
-    let nextOrderNum = lastOrder ? parseInt(lastOrder.order_id.split("-")[2]) + 1 : 1;
+    let nextOrderNum = lastOrder
+      ? parseInt(lastOrder.order_id.split("-")[2]) + 1
+      : 1;
     const order_id = `ORD-${year}-${String(nextOrderNum).padStart(3, "0")}`;
 
     // Generate group order_item_id for orderkb summary
@@ -67,8 +69,13 @@ router.post("/", async (req, res) => {
       WHERE order_item_id LIKE 'OI-${year}-%'
       ORDER BY order_item_id DESC LIMIT 1
     `);
-    let nextGroupNum = lastGroup ? parseInt(lastGroup.order_item_id.split("-")[2]) + 1 : 1;
-    const orderItemGroupId = `OI-${year}-${String(nextGroupNum).padStart(3, "0")}`;
+    let nextGroupNum = lastGroup
+      ? parseInt(lastGroup.order_item_id.split("-")[2]) + 1
+      : 1;
+    const orderItemGroupId = `OI-${year}-${String(nextGroupNum).padStart(
+      3,
+      "0"
+    )}`;
 
     // Also fetch the last individual order_item_id for orderitem table
     const [[lastItem]] = await connection.query(`
@@ -76,7 +83,9 @@ router.post("/", async (req, res) => {
       WHERE order_item_id LIKE 'OI-${year}-%'
       ORDER BY order_item_id DESC LIMIT 1
     `);
-    let nextItemNum = lastItem ? parseInt(lastItem.order_item_id.split("-")[2]) + 1 : nextGroupNum + 1;
+    let nextItemNum = lastItem
+      ? parseInt(lastItem.order_item_id.split("-")[2]) + 1
+      : nextGroupNum + 1;
 
     // Insert into orderkb (summary)
     await connection.query(
@@ -118,6 +127,36 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "Insert failed", details: error.message });
   } finally {
     connection.release();
+  }
+});
+
+// GET order history by customer_id
+router.get("/history/:customer_id", async (req, res) => {
+  const { customer_id } = req.params;
+
+  try {
+    const [results] = await db.query(
+      `
+      SELECT 
+        okb.order_id,
+        okb.order_date AS date,
+        'Completed' AS status,
+        GROUP_CONCAT(CONCAT(oi.quantity_ordered, 'x ', p.name) SEPARATOR ', ') AS items,
+        okb.total_amount AS total
+      FROM orderkb okb
+      JOIN orderitem oi ON okb.order_id = oi.order_id
+      JOIN product p ON oi.product_id = p.product_id
+      WHERE okb.customer_id = ?
+      GROUP BY okb.order_id, okb.order_date, okb.total_amount
+      ORDER BY okb.order_date DESC
+      `,
+      [customer_id]
+    );
+
+    res.json(results);
+  } catch (error) {
+    console.error("GET /orders/history/:customer_id error:", error);
+    res.status(500).json({ error: "Failed to fetch order history" });
   }
 });
 
