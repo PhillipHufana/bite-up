@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Input from "./ui/Input.jsx";
 import {
   Select,
@@ -16,114 +16,75 @@ import {
   AccordionTrigger,
 } from "./ui/Accordion.jsx";
 
-const mockInventoryRecords = [
-  {
-    id: "RCP-2025-001",
-    date: "June 17, 2025 15:24",
-    totalCost: "P 1,233.25",
-    itemCount: 3,
-    supplier: "BP Baking Supplies and Cooking Equipment",
-    items: [
-      {
-        ingredient: "Unsalted Butter",
-        brand: "Anchor",
-        quantity: 4,
-        unit: "225g",
-        totalCost: "P 667.00",
-      },
-      {
-        ingredient: "Vegetable Oil",
-        brand: "Pacific Sunrise",
-        quantity: 1,
-        unit: "1L",
-        totalCost: "P 156.00",
-      },
-      {
-        ingredient: "Margarine",
-        brand: "Bravo Butter Cream",
-        quantity: 10,
-        unit: "225g",
-        totalCost: "P 410.00",
-      },
-    ],
-  },
-  {
-    id: "RCP-2025-002",
-    date: "June 07, 2025 15:24",
-    totalCost: "P 7,062.25",
-    itemCount: 64,
-    supplier: "BP Baking Supplies and Cooking Equipment",
-    items: [
-      {
-        ingredient: "All Purpose Flour",
-        brand: "Gold Medal",
-        quantity: 20,
-        unit: "1kg",
-        totalCost: "P 2,400.00",
-      },
-      {
-        ingredient: "Sugar",
-        brand: "Domino",
-        quantity: 15,
-        unit: "1kg",
-        totalCost: "P 1,800.00",
-      },
-      {
-        ingredient: "Baking Powder",
-        brand: "Calumet",
-        quantity: 5,
-        unit: "454g",
-        totalCost: "P 750.00",
-      },
-    ],
-  },
-  {
-    id: "RCP-2025-003",
-    date: "May 17, 2025 15:24",
-    totalCost: "P 7,062.25",
-    itemCount: 9,
-    supplier: "BP Baking Supplies and Cooking Equipment",
-    items: [
-      {
-        ingredient: "Vanilla Extract",
-        brand: "McCormick",
-        quantity: 3,
-        unit: "59ml",
-        totalCost: "P 450.00",
-      },
-      {
-        ingredient: "Cocoa Powder",
-        brand: "Hershey's",
-        quantity: 2,
-        unit: "226g",
-        totalCost: "P 320.00",
-      },
-      {
-        ingredient: "Salt",
-        brand: "Morton",
-        quantity: 4,
-        unit: "737g",
-        totalCost: "P 200.00",
-      },
-    ],
-  },
-];
-
 export default function InventoryRecords() {
+  const [records, setRecords] = useState([]);
   const [filterDate, setFilterDate] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [orderBy, setOrderBy] = useState("newest");
 
+  const fetchInventoryRecords = async () => {
+    try {
+      const response = await fetch("/api/inventory/records");
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        setRecords(data);
+      } else {
+        console.error("Invalid inventory data format", data);
+        setRecords([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch inventory records:", error);
+      setRecords([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchInventoryRecords();
+  }, []);
+
+  const filteredRecords = Array.isArray(records)
+    ? records
+        .filter((record) => {
+          if (!filterDate) return true;
+          const localDate = new Date(record.date).toLocaleDateString("en-CA"); // yyyy-mm-dd
+          return localDate === filterDate;
+        })
+
+        .sort((a, b) => {
+          let valA, valB;
+
+          switch (sortBy) {
+            case "name":
+              valA = a.id.toLowerCase();
+              valB = b.id.toLowerCase();
+              break;
+            case "date":
+              valA = new Date(a.date);
+              valB = new Date(b.date);
+              break;
+            case "cost":
+              valA = parseFloat(a.totalCost.replace("P ", ""));
+              valB = parseFloat(b.totalCost.replace("P ", ""));
+              break;
+            default:
+              return 0;
+          }
+
+          const comparison = valA > valB ? 1 : valA < valB ? -1 : 0;
+          return orderBy === "newest" ? -comparison : comparison;
+        })
+    : [];
+
   return (
     <div className="space-y-6">
-      {/* Heading */}
       <h2
         className="text-3xl font-marcellus mb-12 mt-3"
         style={{ color: "#444444" }}
       >
         Inventory Records
       </h2>
-      {/* Filters */}
+
       <div
         className="rounded-xl p-4"
         style={{ backgroundColor: "rgba(68,68,68,0.15)" }}
@@ -183,7 +144,7 @@ export default function InventoryRecords() {
 
       {/* Inventory Records */}
       <Accordion type="single" collapsible className="space-y-4">
-        {mockInventoryRecords.map((record) => (
+        {filteredRecords.map((record) => (
           <AccordionItem
             key={record.id}
             value={record.id}
@@ -200,7 +161,11 @@ export default function InventoryRecords() {
                       {record.id}
                     </div>
                     <div className="text-sm font-poppins text-gray-600">
-                      {record.date}
+                      {new Date(record.date).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
                     </div>
                   </div>
                 </div>
@@ -244,6 +209,9 @@ export default function InventoryRecords() {
                         Unit
                       </th>
                       <th className="px-4 py-3 text-left font-poppins font-semibold text-white">
+                        Price per Unit
+                      </th>
+                      <th className="px-4 py-3 text-left font-poppins font-semibold text-white">
                         Total Cost
                       </th>
                     </tr>
@@ -279,6 +247,13 @@ export default function InventoryRecords() {
                         >
                           {item.unit}
                         </td>
+                        <td
+                          className="px-4 py-3 font-poppins"
+                          style={{ color: "#222222" }}
+                        >
+                          {item.unitPrice}
+                        </td>
+
                         <td
                           className="px-4 py-3 font-poppins"
                           style={{ color: "#222222" }}

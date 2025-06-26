@@ -208,67 +208,51 @@ export default function SalesRecord() {
         </div>
       </div>
 
-      {/* Sales by Category and Top Selling Items */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Sales by Category Chart s*/}
+      {/* Top Selling Items */}
+      <div
+        className="rounded-xl overflow-hidden mx-auto max-w-[60rem] w-full"
+        style={{ backgroundColor: "rgba(68, 68, 68, 0.15)" }}
+      >
         <div
-          className="rounded-xl p-6"
-          style={{ backgroundColor: "rgba(63, 51, 31, 0.1)" }}
+          className="px-6 py-4"
+          style={{ backgroundColor: "rgba(68, 68, 68, 0.59)" }}
         >
-          <div className="relative h-80">
-            <canvas ref={pieChartRef} />
-          </div>
+          <h3 className="font-poppins font-semibold text-white text-lg">
+            Top Selling Items
+          </h3>
         </div>
-
-        {/* Top Selling Items */}
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ backgroundColor: "rgba(68, 68, 68, 0.15)" }}
-        >
-          <div
-            className="px-6 py-4"
-            style={{ backgroundColor: "rgba(68, 68, 68, 0.59)" }}
-          >
-            <h3 className="font-poppins font-semibold text-white text-lg">
-              Top Selling Items
-            </h3>
-          </div>
-          <div className="p-6 space-y-4">
-            {topSellingItems.map((item) => (
-              <div
-                key={item.rank}
-                className="rounded-lg p-4 hover:bg-opacity-20 transition-all duration-200"
-                style={{ backgroundColor: "rgba(63, 51, 31, 0.1)" }}
-              >
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-4">
-                    <div
-                      className="text-2xl font-bold"
-                      style={{ color: "#444444" }}
-                    >
-                      #{item.rank}
-                    </div>
-                    <div>
-                      <div className="font-poppins font-semibold text-[#000000] text-lg">
-                        {item.name}
-                      </div>
-                      <div className="text-sm font-poppins text-[#444444]">
-                        {item.sold} items sold
-                      </div>
-                    </div>
+        <div className="p-6 space-y-4">
+          {topSellingItems.map((item) => (
+            <div
+              key={item.rank}
+              className="rounded-lg px-4 py-3 hover:bg-opacity-20 transition-all duration-200"
+              style={{ backgroundColor: "rgba(63, 51, 31, 0.1)" }}
+            >
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-4">
+                  <div className="text-xl font-bold text-[#444444]">
+                    #{item.rank}
                   </div>
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-green-700">
-                      {item.revenue}
+                  <div>
+                    <div className="font-poppins font-semibold text-[#000000] text-lg">
+                      {item.name}
                     </div>
                     <div className="text-sm font-poppins text-[#444444]">
-                      Revenue
+                      {item.sold} items sold
                     </div>
                   </div>
                 </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-green-700">
+                    {item.revenue}
+                  </div>
+                  <div className="text-sm font-poppins text-[#444444]">
+                    Revenue
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
