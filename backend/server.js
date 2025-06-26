@@ -235,6 +235,66 @@ app.delete("/api/ingredients/:id", (req, res) => {
   });
 });
 
+// GET all products
+app.get("/api/products", (req, res) => {
+  const sql = `
+    SELECT 
+      p.product_id AS id,
+      p.name,
+      SUM(pi.quantity_used * i.cost_per_gram) AS totalCostIngredients
+    FROM product p
+    JOIN productingredient pi ON p.product_id = pi.product_id
+    JOIN ingredient i ON pi.ingredient_id = i.ingredient_id
+    GROUP BY p.product_id`;
+  
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    const mappedResults = results.map(product => ({
+      id: product.id,
+      name: product.name,
+      totalCostIngredients: product.totalCostIngredients || 0,
+      desiredQuantity: "100%",
+      desiredPortions: 70,
+      totalIngredientWeight: 100.0,
+      ingredientWeightPerPortion: 1.43,
+      suggestedSellingPrice: "₱1.00",
+      totalSales: "₱42.00",
+      overheadExpense: "₱16.00",
+      netProfit: "₱11.20",
+      costPerPortion: "₱0.20",
+      foodCostPercentage: "33%",
+      profitPerPortion: "₱0.16",
+      profitMargin: "27%",
+    }));
+    res.json(mappedResults);
+  });
+});
+
+// GET product details (ingredients)
+app.get("/api/products/:id", (req, res) => {
+  const productId = req.params.id;
+  const sql = `
+    SELECT 
+      i.name, 
+      i.brand, 
+      i.unit, 
+      pi.quantity_used AS quantity, 
+      i.quantity AS grams,
+      i.cost_per_gram AS cost
+    FROM productingredient pi
+    JOIN ingredient i ON pi.ingredient_id = i.ingredient_id
+    WHERE pi.product_id = ?`;
+  
+  db.query(sql, [productId], (err, results) => {
+    if (err) {
+      console.error("SQL Error:", err.sqlMessage);
+      return res.status(500).json([]); // Return empty array on error
+    }
+    res.json(results || []);
+  });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
