@@ -1,6 +1,6 @@
 "use client";
 
-import { Link } from "react-router-dom"; // <-- Add this import
+import { Link } from "react-router-dom"; 
 
 export default function Navigation({ activeTab, setActiveTab }) {
   const navItems = ["ORDER", "COSTING", "INVENTORY", "RECORDS"];

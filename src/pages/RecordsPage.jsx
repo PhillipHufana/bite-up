@@ -33,7 +33,6 @@ export default function RecordsPage() {
         Records
       </h1>
 
-      {/* Custom Tab Navigation with smooth transitions */}
       <div>
         <div className="flex space-x-0 border-b-2 border-gray-300 mt-8">
           {tabs.map((tab) => (
@@ -71,10 +70,7 @@ export default function RecordsPage() {
         </div>
       </div>
 
-      {/* Spacer between tabs and content */}
       <div className="h-6" />
-
-      {/* Content with increased border radius */}
       <div
         className="border-2 rounded-2xl p-8"
         style={{ borderColor: "#3F331F" }}

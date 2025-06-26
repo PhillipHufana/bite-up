@@ -28,7 +28,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET products S
+// GET products 
 router.get("/products", async (req, res) => {
   try {
     const [rows] = await db.query("SELECT name, unit_cost FROM product");
@@ -92,6 +92,13 @@ router.post("/", async (req, res) => {
       `INSERT INTO orderkb (order_item_id, customer_id, order_id, order_date, total_amount)
        VALUES (?, ?, ?, ?, ?)`,
       [orderItemGroupId, customer_id, order_id, order_date, total_amount]
+    );
+
+    // INSERT INTO orderhistory
+    await connection.query(
+      `INSERT INTO orderhistory (orderhistory_id, customer_id, order_id, date, status)
+   VALUES (?, ?, ?, ?, ?)`,
+      [orderItemGroupId, customer_id, order_id, order_date, "Completed"]
     );
 
     // Insert each item into orderitem table

@@ -180,7 +180,7 @@ export default function SalesRecord() {
       >
         Sales Record
       </h2>
-      {/* Sales Cards - Updated colors */}
+      {/* Sales Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {salesData.map((item, index) => (
           <div
@@ -201,16 +201,16 @@ export default function SalesRecord() {
         ))}
       </div>
 
-      {/* Sales Trends Chart - Updated background */}
+      {/* Sales Trends Chart */}
       <div className="rounded-xl p-6">
         <div className="relative h-80">
           <canvas ref={lineChartRef} />
         </div>
       </div>
 
-      {/* Sales by Category and Top Selling Items - Side by Side */}
+      {/* Sales by Category and Top Selling Items */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Sales by Category Chart - Updated background */}
+        {/* Sales by Category Chart s*/}
         <div
           className="rounded-xl p-6"
           style={{ backgroundColor: "rgba(63, 51, 31, 0.1)" }}
@@ -220,7 +220,7 @@ export default function SalesRecord() {
           </div>
         </div>
 
-        {/* Top Selling Items - Updated colors */}
+        {/* Top Selling Items */}
         <div
           className="rounded-xl overflow-hidden"
           style={{ backgroundColor: "rgba(68, 68, 68, 0.15)" }}
