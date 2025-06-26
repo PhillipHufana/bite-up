@@ -33,7 +33,8 @@ export default function OrdersPage() {
           firstName: order.first_name,
           lastName: order.last_name,
           order: order.order_name,
-          deliveryDate: isNaN(dateObj)
+          rawDate: dateObj,
+          orderDate: isNaN(dateObj)
             ? "Invalid date"
             : dateObj.toLocaleDateString("en-GB"),
           total: `P ${parseFloat(order.total || 0).toFixed(2)}`,
@@ -73,23 +74,27 @@ export default function OrdersPage() {
     if (filterDate) {
       filtered = filtered.filter((order) => {
         const orderDate = new Date(
-          order.deliveryDate.split("/").reverse().join("-")
+          order.orderDate.split("/").reverse().join("-")
         );
         const filterDateObj = new Date(filterDate);
         return orderDate.toDateString() === filterDateObj.toDateString();
       });
     }
+
     filtered.sort((a, b) => {
       let comp = 0;
-      if (sortBy === "name") comp = a.lastName.localeCompare(b.lastName);
-      else if (sortBy === "date")
-        comp = new Date(a.deliveryDate) - new Date(b.deliveryDate);
-      else if (sortBy === "cost")
+      if (sortBy === "name") {
+        comp = a.lastName.localeCompare(b.lastName);
+      } else if (sortBy === "date") {
+        comp = a.rawDate - b.rawDate;
+      } else if (sortBy === "cost") {
         comp =
           parseFloat(a.total.replace("P ", "")) -
           parseFloat(b.total.replace("P ", ""));
+      }
       return orderBy === "newest" ? -comp : comp;
     });
+
     setFilteredOrders(filtered);
   }, [orders, filterDate, sortBy, orderBy]);
 
@@ -229,7 +234,7 @@ export default function OrdersPage() {
                     className="px-6 py-4 font-poppins"
                     style={{ color: "#222222" }}
                   >
-                    {order.deliveryDate}
+                    {order.orderDate}
                   </td>
                 </tr>
               ))}
