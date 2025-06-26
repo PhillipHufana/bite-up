@@ -174,49 +174,46 @@ export default function CustomerProfile() {
                         key={index}
                         className="bg-gradient-to-r from-[rgba(255,255,255,0.3)] to-[rgba(200,200,200,0.15)] rounded-xl px-6 py-4"
                       >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <div className="font-poppins font-bold text-[#222]">
-                              {order.order_id}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              {new Date(
-                                `${order.date}T${order.time || "00:00:00"}`
-                              ).toLocaleString("en-US", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </div>
-                            <div className="mt-1 text-sm font-poppins text-[#222] whitespace-pre-line">
-                              {(() => {
-                                const groupedItems = {};
-                                order.items.split(", ").forEach((entry) => {
-                                  const [qty, ...nameParts] = entry.split("x ");
-                                  const name = nameParts.join("x ").trim();
-                                  if (!groupedItems[name])
-                                    groupedItems[name] = 0;
-                                  groupedItems[name] += parseInt(qty);
-                                });
-                                return Object.entries(groupedItems).map(
-                                  ([name, qty], idx) => (
-                                    <div key={idx}>
-                                      {qty}x {name}
-                                    </div>
-                                  )
-                                );
-                              })()}
-                            </div>
+                        <div className="mb-2">
+                          <div className="font-poppins font-bold text-[#222]">
+                            {order.order_id}
                           </div>
-                          <div className="text-right">
-                            <div className="text-green-600 font-bold text-xl">
-                              P {parseFloat(order.total).toFixed(2)}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              {order.status}
-                            </div>
+                          <div className="text-sm text-gray-600">
+                            {new Date(order.date).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 mb-2">
+                          {order.items.split(", ").map((item, idx) => {
+                            const match = item.match(
+                              /^(\d+)x (.+?) @ ([\d.]+)$/
+                            );
+                            if (!match) return <div key={idx}>{item}</div>;
+                            const [, qty, name, subtotal] = match;
+                            return (
+                              <div
+                                key={idx}
+                                className="flex justify-between font-poppins text-[#222]"
+                              >
+                                <span>{`${qty}x ${name}`}</span>
+                                <span className="font-semibold">
+                                  P {subtotal}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="flex justify-between items-center mt-3">
+                          <div className="text-sm text-gray-600">
+                            {order.status}
+                          </div>
+                          <div className="text-green-600 font-bold text-xl">
+                            P {parseFloat(order.total).toFixed(2)}
                           </div>
                         </div>
                       </div>

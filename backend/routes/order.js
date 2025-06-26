@@ -139,9 +139,9 @@ router.get("/history/:customer_id", async (req, res) => {
       `
       SELECT 
         okb.order_id,
-        okb.order_date AS date,
+        DATE_FORMAT(okb.order_date, '%Y-%m-%d') AS date,
         'Completed' AS status,
-        GROUP_CONCAT(CONCAT(oi.quantity_ordered, 'x ', p.name) SEPARATOR ', ') AS items,
+        GROUP_CONCAT(CONCAT(oi.quantity_ordered, 'x ', p.name, ' @ ', FORMAT(oi.quantity_ordered * oi.price_per_unit, 2)) SEPARATOR ', ') AS items,
         okb.total_amount AS total
       FROM orderkb okb
       JOIN orderitem oi ON okb.order_id = oi.order_id
