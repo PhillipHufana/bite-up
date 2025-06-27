@@ -282,6 +282,7 @@ app.get("/api/products", (req, res) => {
       id: product.id,
       name: product.name,
       totalCostIngredients: product.totalCostIngredients || 0,
+      productionDate: new Date().toISOString().split("T")[0],
       desiredQuantity: "100%",
       desiredPortions: 70,
       totalIngredientWeight: 100.0,

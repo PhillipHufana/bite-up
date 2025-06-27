@@ -41,7 +41,7 @@ const App = () => {
         <div className="relative px-6 py-12">
           <div className="max-w-4xl mx-auto text-center">
             {/* Logo Section */}
-            <div className="flex items-center justify-center mb-6 mt-5">
+            <div className="flex items-center justify-center mb-6 mt-1">
               <div className="bg-gradient-to-r from-amber-800 to-amber-900 p-4 rounded-full shadow-lg mr-4">
                 <Cookie size={48} className="text-white" />
               </div>
@@ -60,7 +60,7 @@ const App = () => {
       </div>
 
       {/* Menu Cards Section */}
-      <div className="px-6 pb-12 pt-7">
+      <div className="px-8 pb-5 pt-2">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {menuItems.map((item, index) => (

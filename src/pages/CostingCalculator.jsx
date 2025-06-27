@@ -115,6 +115,10 @@ const CostingCalculator = () => {
               {/* Left Column - Production Details */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="font-medium text-gray-700">Production Date: </span>
+                  <span className="font-semibold text-gray-900">{currentProduct.productionDate}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="font-medium text-gray-700">Desired Quantity (% of Full Recipe)</span>
                   <span className="font-semibold text-gray-900">{currentProduct.desiredQuantity}</span>
                 </div>
