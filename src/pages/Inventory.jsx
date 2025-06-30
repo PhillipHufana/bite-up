@@ -173,20 +173,28 @@ const Inventory = () => {
     setEditData(item)
   }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setEditData((prev) => ({ ...prev, [name]: value }))
-  }
+const handleChange = (e) => {
+  const { name, value } = e.target;
+  setEditData((prev) => ({ ...prev, [name]: value }));
+};
+
+
 
   const handleSave = async (id) => {
-    try {
-      await axios.put(`http://localhost:3001/api/ingredients/${id}`, editData)
-      setEditRowId(null)
-      fetchIngredients()
-    } catch (err) {
-      console.error("Update failed:", err)
+  try {
+    await axios.put(`http://localhost:3001/api/ingredients/${id}`, editData);
+
+    // Automatically delete if quantity becomes 0
+    if (parseFloat(editData.quantity) === 0) {
+      await axios.delete(`http://localhost:3001/api/ingredients/${id}`);
     }
+
+    setEditRowId(null);
+    fetchIngredients();
+  } catch (err) {
+    console.error("Update or delete failed:", err);
   }
+};
 
   const handleDelete = async (id) => {
     if (!id || typeof id !== "string") {
