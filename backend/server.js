@@ -56,11 +56,10 @@ app.post("/api/ingredients/bulk", (req, res) => {
 
   const updatedIds = [];
 
-  // Function to generate the next ingredient_id
   const generateNextId = (callback) => {
     const prefix = "ING-2025-";
     const query = "SELECT ingredient_id FROM ingredient ORDER BY ingredient_id DESC LIMIT 1";
-
+    
     db.query(query, (err, results) => {
       if (err) return callback(err);
 
@@ -79,97 +78,114 @@ app.post("/api/ingredients/bulk", (req, res) => {
   };
 
   const processItem = (item, callback) => {
-    const {
-      name,
-      category,
-      brand,
-      unit,
-      price,
-      quantity,
-      ml_to_gram_conversion,
-      cost_per_gram,
-      purchase_date,
-    } = item;
+  let {
+    name,
+    category,
+    brand,
+    unit,
+    price,
+    quantity,
+    cost_per_gram,
+    purchase_date,
+  } = item;
 
-    if (!name || !category || price == null || quantity == null) {
-      return callback(); // Skip invalid item
-    }
+  if (!name || !category || price == null || quantity == null) {
+    return callback(); // Skip invalid item
+  }
 
-    const checkQuery = "SELECT * FROM ingredient WHERE category = ? AND name = ?";
-    db.query(checkQuery, [category, name], (err, results) => {
-      if (err) return callback(err);
+  // Normalize unit and convert quantity
+  let convertedQty = parseFloat(quantity);
+  let normalizedUnit = unit.toLowerCase();
 
-      if (results.length > 0) {
-        const existing = results[0];
+  switch (normalizedUnit) {
+    case "kg":
+      convertedQty *= 1000;
+      normalizedUnit = "g"; // Store as grams
+      break;
+    case "l":
+      convertedQty *= 1000;
+      normalizedUnit = "ml"; // Store as milliliters
+      break;
+    case "g":
+    case "gr":
+      normalizedUnit = "g";
+      break;
+    case "ml":
+    case "pc":
+      // no conversion needed
+      break;
+    default:
+      return callback(new Error(`Unsupported unit: ${unit}`));
+  }
 
-        const incomingPrice = parseFloat(price);
-        const incomingQty = parseInt(quantity);
-        const currentPrice = parseFloat(existing.price);
-        const currentQty = parseInt(existing.quantity);
+  const checkQuery = "SELECT * FROM ingredient WHERE category = ? AND name = ?";
+  db.query(checkQuery, [category, name], (err, results) => {
+    if (err) return callback(err);
 
-        const priceIncreased = incomingPrice > currentPrice;
-        const updatedPrice = priceIncreased ? incomingPrice : currentPrice;
-        const updatedQuantity = currentQty + incomingQty;
+    if (results.length > 0) {
+      const existing = results[0];
 
-        const updateQuery = `
-          UPDATE ingredient 
-          SET price = ?, quantity = ?, ml_to_gram_conversion = ?, cost_per_gram = ?, purchase_date = ?
-          WHERE ingredient_id = ?
+      const incomingPrice = parseFloat(price);
+      const currentPrice = parseFloat(existing.price);
+      const updatedPrice = incomingPrice > currentPrice ? incomingPrice : currentPrice;
+      const updatedQuantity = parseFloat(existing.quantity) + convertedQty;
+
+      const updateQuery = `
+        UPDATE ingredient 
+        SET price = ?, quantity = ?, cost_per_gram = ?, purchase_date = ?, unit = ?
+        WHERE ingredient_id = ?
+      `;
+
+      db.query(
+        updateQuery,
+        [
+          updatedPrice,
+          updatedQuantity,
+          parseFloat(cost_per_gram) || 0,
+          purchase_date || new Date().toISOString(),
+          normalizedUnit,
+          existing.ingredient_id,
+        ],
+        (updateErr) => {
+          if (!updateErr && incomingPrice > currentPrice) {
+            updatedIds.push(existing.ingredient_id);
+          }
+          callback(updateErr);
+        }
+      );
+    } else {
+      generateNextId((idErr, newId) => {
+        if (idErr) return callback(idErr);
+
+        const insertQuery = `
+          INSERT INTO ingredient 
+          (ingredient_id, name, category, brand, unit, price, quantity, cost_per_gram, purchase_date)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         db.query(
-          updateQuery,
+          insertQuery,
           [
-            updatedPrice,
-            updatedQuantity,
-            parseFloat(ml_to_gram_conversion) || 0,
+            newId,
+            name,
+            category,
+            brand,
+            normalizedUnit, // Store normalized unit (g, ml, pc)
+            parseFloat(price),
+            convertedQty,
             parseFloat(cost_per_gram) || 0,
-            purchase_date || new Date().toISOString().split("T")[0],
-            existing.ingredient_id,
+            purchase_date || new Date().toISOString()
           ],
-          (updateErr) => {
-            if (!updateErr && priceIncreased) {
-              updatedIds.push(existing.ingredient_id);
-            }
-            callback(updateErr);
+          (insertErr) => {
+            if (!insertErr) updatedIds.push(newId);
+            callback(insertErr);
           }
         );
-      } else {
-        // Insert new with custom ingredient_id
-        generateNextId((idErr, newId) => {
-          if (idErr) return callback(idErr);
+      });
+    }
+  });
+};
 
-          const insertQuery = `
-            INSERT INTO ingredient 
-            (ingredient_id, name, category, brand, unit, price, quantity, ml_to_gram_conversion, cost_per_gram, purchase_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-
-          db.query(
-            insertQuery,
-            [
-              newId,
-              name,
-              category,
-              brand,
-              unit,
-              parseFloat(price),
-              parseInt(quantity),
-              parseFloat(ml_to_gram_conversion) || 0,
-              parseFloat(cost_per_gram) || 0,
-              purchase_date || new Date().toISOString().split("T")[0],
-            ],
-            (insertErr, result) => {
-              if (!insertErr) {
-                updatedIds.push(newId); // track for highlight if needed
-              }
-              callback(insertErr);
-            }
-          );
-        });
-      }
-    });
-  };
 
   const processAll = (index = 0) => {
     if (index >= items.length) {
@@ -186,9 +202,6 @@ app.post("/api/ingredients/bulk", (req, res) => {
 
   processAll();
 });
-
-
-
 
 
 // UPDATE ingredient

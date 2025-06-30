@@ -341,7 +341,6 @@ const handleChange = (e) => {
                               <th className="px-4 py-3 text-left font-semibold">Unit</th>
                               <th className="px-4 py-3 text-left font-semibold">Price</th>
                               <th className="px-4 py-3 text-left font-semibold">Qty</th>
-                              <th className="px-4 py-3 text-left font-semibold">ML→G</th>
                               <th className="px-4 py-3 text-left font-semibold">Cost/g</th>
                               <th className="px-4 py-3 text-left font-semibold">Purchase Date</th>
                               <th className="px-4 py-3 text-left font-semibold">Actions</th>
