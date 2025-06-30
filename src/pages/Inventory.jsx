@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react"
 import axios from "axios"
-import { ChevronDown, ChevronUp, Edit, Trash2, X } from "lucide-react"
+import CreatableSelect from "react-select/creatable"
+import Select from "react-select"
+import { ChevronDown, ChevronUp, Edit, Trash2, X, Plus } from "lucide-react"
 import Navbar from "../components/Navbar"
 
 const Inventory = () => {
@@ -12,14 +14,8 @@ const Inventory = () => {
   const [editData, setEditData] = useState({})
   const [expandedCategories, setExpandedCategories] = useState({})
   const [showModal, setShowModal] = useState(false)
-  const [highlightedRowId, setHighlightedRowId] = useState({});
-  const [deletingId, setDeletingId] = useState(null);
-
-  const categories = ["Additives, Improvers, Leaveners", "Alcohol", "Butter, Margarine, Shortening", "Cereals, Grinds, Flakes", "Cheese (Cream Cheese)",
-    "Cheese (General)", "Chocolates", "Cocoa Powder", "Cooking Oils", "Egg & Egg Powder", "Flavorings and Food Color", "Flour and Starches", "Fondant and Gumpaste", 
-    "Fruits, Fillings", "Milk (Condensed/Condensada)", "Milk (Creams, Yogurt)", "Milk (Evaporated)", "Milk (Fresh)", "Milk (Powder)", "Nuts", "Other", "Salt, Seasonings & Spices", 
-    "Spreads", "Sweeteners", "Syrups", "Added Ingredients"]
-  const brands = ["Brand A", "Brand B", "Brand C"]
+  const [highlightedRowId, setHighlightedRowId] = useState({})
+  const [deletingId, setDeletingId] = useState(null)
 
   //Form state for modal
   const [formItems, setFormItems] = useState([
@@ -27,14 +23,120 @@ const Inventory = () => {
       category: "",
       itemName: "",
       brand: "",
-      unit: "",
       unitPrice: "",
       quantity: "",
-      ml: "",
-      grams: "",
-      costPerUnit: "",
+      unit: "",
     },
   ])
+
+  // Custom styles for react-select
+  const customSelectStyles = {
+    control: (provided, state) => ({
+      ...provided,
+      backgroundColor: "#fef7ed", // amber-50
+      borderColor: state.isFocused ? "#d97706" : "#fbbf24", // amber-600 : amber-400
+      borderWidth: "2px",
+      borderRadius: "0.75rem", // rounded-xl
+      minHeight: "44px",
+      boxShadow: state.isFocused ? "0 0 0 3px rgba(217, 119, 6, 0.1)" : "none",
+      "&:hover": {
+        borderColor: "#d97706", // amber-600
+      },
+      transition: "all 0.2s ease",
+    }),
+    valueContainer: (provided) => ({
+      ...provided,
+      padding: "0 12px",
+    }),
+    input: (provided) => ({
+      ...provided,
+      color: "#92400e", // amber-800
+      fontSize: "14px",
+    }),
+    placeholder: (provided) => ({
+      ...provided,
+      color: "#a3a3a3", // neutral-400
+      fontSize: "14px",
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      color: "#92400e", // amber-800
+      fontSize: "14px",
+      fontWeight: "500",
+    }),
+    menu: (provided) => ({
+      ...provided,
+      backgroundColor: "#fffbeb", // amber-50
+      border: "2px solid #fbbf24", // amber-400
+      borderRadius: "0.75rem",
+      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      zIndex: 9999,
+      maxHeight: "200px",
+      overflowY: "auto",
+      overflowX: "hidden",
+    }),
+    menuList: (provided) => ({
+      ...provided,
+      padding: "8px",
+      maxHeight: "184px",
+      overflowY: "auto",
+      overflowX: "hidden",
+      "&::-webkit-scrollbar": {
+        width: "6px",
+      },
+      "&::-webkit-scrollbar-track": {
+        background: "#fef7ed",
+        borderRadius: "3px",
+      },
+      "&::-webkit-scrollbar-thumb": {
+        background: "#fbbf24",
+        borderRadius: "3px",
+      },
+      "&::-webkit-scrollbar-thumb:hover": {
+        background: "#d97706",
+      },
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isSelected
+        ? "#d97706" // amber-600
+        : state.isFocused
+          ? "#fde68a" // amber-200
+          : "transparent",
+      color: state.isSelected ? "#ffffff" : "#92400e", // white : amber-800
+      padding: "12px 16px",
+      borderRadius: "0.5rem",
+      margin: "2px 0",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: state.isSelected ? "600" : "500",
+      transition: "all 0.15s ease",
+      "&:hover": {
+        backgroundColor: state.isSelected ? "#d97706" : "#fde68a",
+      },
+    }),
+    indicatorSeparator: () => ({
+      display: "none",
+    }),
+    dropdownIndicator: (provided, state) => ({
+      ...provided,
+      color: "#d97706", // amber-600
+      padding: "0 8px",
+      transform: state.selectProps.menuIsOpen ? "rotate(180deg)" : "rotate(0deg)",
+      transition: "transform 0.2s ease",
+      "&:hover": {
+        color: "#92400e", // amber-800
+      },
+    }),
+    clearIndicator: (provided) => ({
+      ...provided,
+      color: "#ef4444", // red-500
+      padding: "0 8px",
+      "&:hover": {
+        color: "#dc2626", // red-600
+      },
+    }),
+  }
 
   useEffect(() => {
     fetchIngredients()
@@ -45,13 +147,6 @@ const Inventory = () => {
       const res = await axios.get("http://localhost:3001/api/ingredients")
       setIngredients(res.data)
       setLoading(false)
-
-      const grouped = groupByCategory(res.data)
-      const initialExpanded = {}
-      Object.keys(grouped).forEach((cat) => {
-        initialExpanded[cat] = false
-      })
-      setExpandedCategories(initialExpanded)
     } catch (err) {
       console.error("Error fetching data:", err)
       setLoading(false)
@@ -66,7 +161,7 @@ const Inventory = () => {
     }, {})
   }
 
-const toggleCategory = (category) => {
+  const toggleCategory = (category) => {
     setExpandedCategories((prev) => ({
       ...prev,
       [category]: !prev[category],
@@ -93,25 +188,25 @@ const toggleCategory = (category) => {
     }
   }
 
-    const handleDelete = async (id) => {
-  if (!id || typeof id !== "string") {
-    console.warn("Invalid ingredient_id:", id);
-    return;
-  }
+  const handleDelete = async (id) => {
+    if (!id || typeof id !== "string") {
+      console.warn("Invalid ingredient_id:", id)
+      return
+    }
 
-  if (window.confirm("Are you sure you want to delete this item?")) {
-    try {
-      setDeletingId(id); // Start loading
-      await axios.delete(`http://localhost:3001/api/ingredients/${id}`);
-      await fetchIngredients(); // Refresh UI
-    } catch (err) {
-      console.error("Delete failed:", err.response?.data?.error || err.message);
-      alert(`Error: ${err.response?.data?.error || "Check console for details"}`);
-    } finally {
-      setDeletingId(null);
+    if (window.confirm("Are you sure you want to delete this item?")) {
+      try {
+        setDeletingId(id)
+        await axios.delete(`http://localhost:3001/api/ingredients/${id}`)
+        await fetchIngredients()
+      } catch (err) {
+        console.error("Delete failed:", err.response?.data?.error || err.message)
+        alert(`Error: ${err.response?.data?.error || "Check console for details"}`)
+      } finally {
+        setDeletingId(null)
+      }
     }
   }
-};
 
   //Modal Form Handlers
   const updateFormItem = (index, field, value) => {
@@ -136,68 +231,60 @@ const toggleCategory = (category) => {
         unit: "",
         unitPrice: "",
         quantity: "",
-        ml: "",
-        grams: "",
-        costPerUnit: "",
       },
     ])
   }
 
   const handleModalSave = async () => {
-  try {
-    if (!formItems || formItems.length === 0) return;
+    try {
+      if (!formItems || formItems.length === 0) return
 
-    const response = await axios.post("http://localhost:3001/api/ingredients/bulk", {
-      items: formItems.map((item) => ({
-        category: item.category,
-        name: item.itemName,
-        brand: item.brand,
-        unit: item.unit || "unit",
-        price: parseFloat(item.unitPrice),
-        quantity: parseInt(item.quantity),
-        ml_to_gram_conversion:
-          item.ml && item.grams
-            ? (parseFloat(item.grams) / parseFloat(item.ml)).toFixed(5)
-            : 0,
-        cost_per_gram: parseFloat(item.costPerUnit) || 0,
-        purchase_date: new Date().toISOString().split("T")[0],
-      })),
-    });
+      const response = await axios.post("http://localhost:3001/api/ingredients/bulk", {
+        items: formItems.map((item) => ({
+          category: item.category,
+          name: item.itemName,
+          brand: item.brand,
+          unit: item.unit,
+          quantity: Number.parseFloat(item.quantity),
+          price: Number.parseFloat(item.unitPrice),
+          purchase_date: new Date().toISOString().split("T")[0],
+        })),
+      })
 
-    const updatedIds = response.data.updatedIds || [];
-
-    if (updatedIds.length > 0) {
-      setHighlightedRowId(updatedIds); // pass full array
+      setShowModal(false)
+      setFormItems([
+        {
+          category: "",
+          itemName: "",
+          brand: "",
+          unit: "",
+          unitPrice: "",
+          quantity: "",
+        },
+      ])
+      fetchIngredients()
+    } catch (err) {
+      console.error("Error saving multiple items:", err)
     }
-
-
-
-    setShowModal(false);
-    setFormItems([
-      {
-        category: "",
-        itemName: "",
-        brand: "",
-        unit: "",
-        unitPrice: "",
-        quantity: "",
-        ml: "",
-        grams: "",
-        costPerUnit: "",
-      },
-    ]);
-
-    fetchIngredients();
-  } catch (err) {
-    console.error("Error saving multiple items:", err);
   }
-};
 
   const groupedData = groupByCategory(ingredients)
 
+  const getItemNamesByCategory = (category) => {
+    return Array.from(new Set(ingredients.filter((i) => i.category === category).map((i) => i.name))).map((n) => ({
+      label: n,
+      value: n,
+    }))
+  }
+
+  const getBrandsByCategoryAndItem = (category, itemName) => {
+    return Array.from(
+      new Set(ingredients.filter((i) => i.category === category && i.name === itemName).map((i) => i.brand)),
+    ).map((b) => ({ label: b, value: b }))
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      
       {/* Adds the Navbar component */}
       <Navbar activeTab="INVENTORY" />
 
@@ -254,18 +341,16 @@ const toggleCategory = (category) => {
                           </thead>
                           <tbody>
                             {items.map((item) => {
-                              const isEditing = editRowId === item.ingredient_id;
-                            return (
-                              <tr
-                                key={item.ingredient_id}
-                                className={
-                                Array.isArray(highlightedRowId) && highlightedRowId.includes(item.ingredient_id)
-                                ? "bg-yellow-200 transition-colors duration-300"
-                          : ""
-                                }
-    >
-
-
+                              const isEditing = editRowId === item.ingredient_id
+                              return (
+                                <tr
+                                  key={item.ingredient_id}
+                                  className={
+                                    Array.isArray(highlightedRowId) && highlightedRowId.includes(item.ingredient_id)
+                                      ? "bg-yellow-200 transition-colors duration-300"
+                                      : ""
+                                  }
+                                >
                                   <td className="px-4 py-3">
                                     {isEditing ? (
                                       <input
@@ -376,8 +461,9 @@ const toggleCategory = (category) => {
                                           </button>
                                           <button
                                             onClick={() => handleDelete(item.ingredient_id)}
-                                              className="text-red-600 hover:text-red-800 transition-colors">
-                                              {deletingId === item.ingredient_id ? (
+                                            className="text-red-600 hover:text-red-800 transition-colors"
+                                          >
+                                            {deletingId === item.ingredient_id ? (
                                               <span className="text-xs text-gray-500 animate-pulse">Deleting...</span>
                                             ) : (
                                               <Trash2 className="w-4 h-4" />
@@ -404,133 +490,168 @@ const toggleCategory = (category) => {
         )}
       </main>
 
-      {/* Modal */}
+      {/* Enhanced Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-amber-50 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-amber-200 to-orange-200 px-6 py-4 flex justify-between items-center">
-              <h3 className="text-2xl font-bold text-amber-900">ADD NEW ITEM</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden border border-amber-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-amber-700 to-orange-900 px-8 py-2 flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-1">Add New Items</h3>
+              </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-amber-700 hover:text-amber-900 transition-colors"
+                className="text-white hover:text-amber-200 transition-colors p-2 hover:bg-white/10 rounded-full"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="p-6 max-h-[calc(90vh-140px)] overflow-y-auto">
-              <div className="space-y-6">
+            {/* Modal Content */}
+            <div className="p-8 max-h-[calc(95vh-200px)] overflow-y-auto overflow-x-hidden">
+              <div className="space-y-8">
                 {formItems.map((item, index) => (
-                  <div key={index} className="bg-white rounded-lg p-6 shadow-md border border-amber-200">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-lg font-semibold text-amber-800">Item {index + 1}</h4>
+                  <div
+                    key={index}
+                    className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-8 shadow-lg border-2 border-amber-100 hover:border-amber-200 transition-all duration-300"
+                  >
+                    {/* Item Header */}
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-bold text-amber-800">Item {index + 1}</h4>
+                          <p className="text-amber-600 text-sm">Enter the item details below</p>
+                        </div>
+                      </div>
                       {formItems.length > 1 && (
                         <button
                           onClick={() => removeFormItem(index)}
-                          className="text-red-600 hover:text-red-800 transition-colors"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-all duration-200"
                         >
                           <X className="w-5 h-5" />
                         </button>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-amber-800 mb-2">Category:</label>
-                        <select
-                          value={item.category}
-                          onChange={(e) => updateFormItem(index, "category", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        >
-                          <option value="">Select Category</option>
-                          {categories.map((cat) => (
-                            <option key={cat} value={cat}>
-                              {cat}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-amber-800 mb-2">Item Name:</label>
-                        <input
-                          type="string"
-                          value={item.itemName}
-                          onChange={(e) => updateFormItem(index, "itemName", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          placeholder="Item Name"
+                    {/* Form Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {/* Category */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
+                          Category <span className="text-red-500">*</span>
+                        </label>
+                        <CreatableSelect
+                          isClearable
+                          placeholder="Select or create category..."
+                          onChange={(selected) => updateFormItem(index, "category", selected ? selected.value : "")}
+                          onCreateOption={(inputValue) => updateFormItem(index, "category", inputValue)}
+                          value={item.category ? { label: item.category, value: item.category } : null}
+                          options={Array.from(new Set(ingredients.map((i) => i.category))).map((c) => ({
+                            label: c,
+                            value: c,
+                          }))}
+                          styles={customSelectStyles}
+                          classNamePrefix="react-select"
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-amber-800 mb-2">Brand:</label>
-                        <select
-                          value={item.brand}
-                          onChange={(e) => updateFormItem(index, "brand", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        >
-                          <option value="">Select Brand</option>
-                          {brands.map((brand) => (
-                            <option key={brand} value={brand}>
-                              {brand}
-                            </option>
-                          ))}
-                        </select>
+                      {/* Item Name */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
+                          Item Name <span className="text-red-500">*</span>
+                        </label>
+                        <CreatableSelect
+                          isClearable
+                          placeholder="Select or create item..."
+                          onChange={(selected) => {
+                            updateFormItem(index, "itemName", selected ? selected.value : "")
+                            updateFormItem(index, "brand", "") // reset brand when item changes
+                          }}
+                          onCreateOption={(inputValue) => updateFormItem(index, "itemName", inputValue)}
+                          value={item.itemName ? { label: item.itemName, value: item.itemName } : null}
+                          options={getItemNamesByCategory(item.category)}
+                          styles={customSelectStyles}
+                          classNamePrefix="react-select"
+                          isDisabled={!item.category}
+                        />
+                        {!item.category && (
+                          <p className="text-xs text-amber-600 mt-1">Please select a category first</p>
+                        )}
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-amber-800 mb-2">Unit Price:</label>
+                      {/* Brand */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
+                          Brand <span className="text-red-500">*</span>
+                        </label>
+                        <CreatableSelect
+                          isClearable
+                          placeholder="Select or create brand..."
+                          onChange={(selected) => updateFormItem(index, "brand", selected ? selected.value : "")}
+                          onCreateOption={(inputValue) => updateFormItem(index, "brand", inputValue)}
+                          value={item.brand ? { label: item.brand, value: item.brand } : null}
+                          options={Array.from(new Set(ingredients.map((i) => i.brand))).map((b) => ({
+                            label: b,
+                            value: b,
+                          }))}
+                          styles={customSelectStyles}
+                          classNamePrefix="react-select"
+                        />
+                      </div>
+
+                      {/* Unit */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
+                          Unit <span className="text-red-500">*</span>
+                        </label>
+                        <Select
+                          placeholder="Select unit..."
+                          options={[
+                            { label: "Grams (g)", value: "grams" },
+                            { label: "Kilograms (kg)", value: "kg" },
+                            { label: "Milliliters (ml)", value: "ml" },
+                            { label: "Liters (l)", value: "l" },
+                            { label: "Pieces (pc)", value: "piece" },
+                          ]}
+                          value={item.unit ? { label: item.unit, value: item.unit } : null}
+                          onChange={(selected) => updateFormItem(index, "unit", selected ? selected.value : "")}
+                          styles={customSelectStyles}
+                          classNamePrefix="react-select"
+                        />
+                      </div>
+
+                      {/* Quantity */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
+                          Quantity <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={item.quantity || ""}
+                          onChange={(e) => updateFormItem(index, "quantity", e.target.value)}
+                          className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
+                          placeholder="Enter quantity..."
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+
+                      {/* Unit Price */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
+                          Unit Price (₱) <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="number"
                           value={item.unitPrice}
                           onChange={(e) => updateFormItem(index, "unitPrice", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
                           placeholder="0.00"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-amber-800 mb-2">Quantity:</label>
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => updateFormItem(index, "quantity", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          placeholder="0"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-amber-800 mb-2">ML:</label>
-                        <input
-                          type="number"
-                          value={item.ml}
-                          onChange={(e) => updateFormItem(index, "ml", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          placeholder="0"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-amber-800 mb-2">Grams:</label>
-                        <input
-                          type="number"
-                          value={item.grams}
-                          onChange={(e) => updateFormItem(index, "grams", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          placeholder="0"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-amber-800 mb-2">Cost per ml/gram:</label>
-                        <input
-                          type="number"
-                          value={item.costPerUnit}
-                          onChange={(e) => updateFormItem(index, "costPerUnit", e.target.value)}
-                          className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          placeholder="0.00000"
-                          step="0.00001"
+                          min="0"
+                          step="0.01"
                         />
                       </div>
                     </div>
@@ -539,21 +660,28 @@ const toggleCategory = (category) => {
               </div>
             </div>
 
-            <div className="bg-amber-100 px-6 py-4 flex justify-end space-x-4">
-              <button
+            {/* Modal Footer */}
+            <div className="bg-gradient-to-r from-amber-100 to-orange-100 px-8 py-3 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-amber-200">
+              <div className="text-sm text-amber-700">
+                <span className="font-semibold">{formItems.length}</span> item{formItems.length !== 1 ? "s" : ""} ready
+                to save
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={addNewFormItem}
+                  className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 flex items-center space-x-2 shadow-lg"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Another Item</span>
+                </button>
+                <button
                   type="button"
                   onClick={handleModalSave}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
                 >
-                  SAVE
-              </button>
-
-              <button
-                onClick={addNewFormItem}
-                className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-2 rounded-lg font-semibold transition-all"
-              >
-                ADD NEW +
-              </button>
+                  Save All Items
+                </button>
+              </div>
             </div>
           </div>
         </div>

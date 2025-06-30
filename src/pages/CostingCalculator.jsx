@@ -189,6 +189,7 @@ const CostingCalculator = () => {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Quantity</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Grams</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Cost</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Price Increase</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -199,6 +200,7 @@ const CostingCalculator = () => {
                         <td className="px-4 py-3 text-sm text-gray-700">{ingredient.unit}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{ingredient.quantity}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{ingredient.grams}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ingredient.cost}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ingredient.cost}</td>
                       </tr>
                     ))}
