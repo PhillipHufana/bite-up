@@ -26,6 +26,7 @@ const Inventory = () => {
       unitPrice: "",
       quantity: "",
       unit: "",
+      purchaseDate: "",
     },
   ]);
 
@@ -255,9 +256,20 @@ const Inventory = () => {
         unit: "",
         unitPrice: "",
         quantity: "",
+        purchaseDate: "",
       },
     ]);
   };
+const formatDate = (isoString) => {
+  if (!isoString) return "-";
+  try {
+    const date = new Date(isoString);
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return date.toLocaleDateString("en-US", options);
+  } catch {
+    return "-";
+  }
+};
 
   const handleModalSave = async () => {
   try {
@@ -285,6 +297,7 @@ const Inventory = () => {
         unit: "",
         unitPrice: "",
         quantity: "",
+        purchaseDate: "",
       },
     ]);
     await fetchIngredients(); // Use await to ensure update
@@ -488,7 +501,7 @@ const Inventory = () => {
                                     )}
                                   </td>
                                   <td className="px-4 py-3">
-                                    {item.purchase_date}
+                                    {formatDate(item.purchase_date)}
                                   </td>
                                   <td className="px-4 py-3">
                                     <div className="flex space-x-2">
@@ -771,6 +784,20 @@ const Inventory = () => {
                           placeholder="0.00"
                           min="0"
                           step="0.01"
+                        />
+                      </div>
+                      {/* Purchase Date */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
+                          Purchase Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={item.purchaseDate}
+                          onChange={(e) =>
+                            updateFormItem(index, "purchaseDate", e.target.value)
+                          }
+                          className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
                         />
                       </div>
                     </div>
