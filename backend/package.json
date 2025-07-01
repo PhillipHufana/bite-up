@@ -1,7 +1,6 @@
 {
   "name": "biteup-backend",
   "version": "1.0.0",
-  "description": "Express + MySQL backend server for BiteUp system",
   "main": "index.js",
   "type": "module",
   "scripts": {
