@@ -193,7 +193,7 @@ const Inventory = () => {
       price: parseFloat(editData.price),
       quantity: parseFloat(editData.quantity),
       cost_per_gram: parseFloat(editData.cost_per_gram),
-      purchase_date: new Date().toISOString().split("T")[0], // assuming you want to update the date
+      purchase_date: editData.purchaseDate
     });
 
     if (parseFloat(editData.quantity) === 0) {
@@ -284,7 +284,8 @@ const formatDate = (isoString) => {
         quantity: Number.parseFloat(item.quantity),
         price: Number.parseFloat(item.unitPrice),
         cost_per_gram: 0, // Default to 0 if not computed yet
-        purchase_date: new Date().toISOString().split("T")[0],
+        purchase_date: item.purchaseDate,
+
       })),
     });
 
@@ -500,6 +501,20 @@ const formatDate = (isoString) => {
                                       item.cost_per_gram
                                     )}
                                   </td>
+                                  {/* <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="cost_per_gram"
+                                        value={editData.purc}
+                                        onChange={handleChange}
+                                        type="number"
+                                        step="0.00001"
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      item.cost_per_gram
+                                    )}
+                                  </td> */}
                                   <td className="px-4 py-3">
                                     {formatDate(item.purchase_date)}
                                   </td>

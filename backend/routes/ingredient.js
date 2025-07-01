@@ -114,7 +114,7 @@ router.post("/bulk", async (req, res) => {
             updatedPrice,
             updatedQuantity,
             parseFloat(cost_per_gram) || 0,
-            purchase_date || new Date().toISOString().split("T")[0],
+            purchase_date,
             normalizedUnit,
             existing.ingredient_id,
           ]
@@ -126,7 +126,7 @@ router.post("/bulk", async (req, res) => {
         await db.query(
           `INSERT INTO ingredient 
            (ingredient_id, name, category, brand, unit, price, quantity, cost_per_gram, purchase_date)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             newId,
             name,
@@ -136,7 +136,7 @@ router.post("/bulk", async (req, res) => {
             parseFloat(price),
             convertedQty,
             parseFloat(cost_per_gram) || 0,
-            purchase_date || new Date().toISOString().split("T")[0],
+            purchase_date
           ]
         );
         updatedIds.push(newId);
