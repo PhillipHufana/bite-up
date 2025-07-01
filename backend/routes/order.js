@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
       okb.order_date AS delivery_date,
       okb.total_amount AS total,
       'Completed' AS status
-    FROM orderkb okb
+    FROM orders okb
     JOIN customer c USING (customer_id)
     JOIN orderitem oi USING (order_id)
     JOIN product p USING (product_id)
@@ -55,7 +55,7 @@ router.post("/", async (req, res) => {
 
     // Generate unique order_id
     const [[lastOrder]] = await connection.query(`
-      SELECT order_id FROM orderkb
+      SELECT order_id FROM orders
       WHERE order_id LIKE 'ORD-${year}-%'
       ORDER BY order_id DESC LIMIT 1
     `);
@@ -64,9 +64,9 @@ router.post("/", async (req, res) => {
       : 1;
     const order_id = `ORD-${year}-${String(nextOrderNum).padStart(3, "0")}`;
 
-    // Generate group order_item_id for orderkb summary
+    // Generate group order_item_id for orders summary
     const [[lastGroup]] = await connection.query(`
-      SELECT order_item_id FROM orderkb
+      SELECT order_item_id FROM orders
       WHERE order_item_id LIKE 'OI-${year}-%'
       ORDER BY order_item_id DESC LIMIT 1
     `);
@@ -88,9 +88,9 @@ router.post("/", async (req, res) => {
       ? parseInt(lastItem.order_item_id.split("-")[2]) + 1
       : nextGroupNum + 1;
 
-    // Insert into orderkb 
+    // Insert into orders
     await connection.query(
-      `INSERT INTO orderkb (order_item_id, customer_id, order_id, order_date, total_amount)
+      `INSERT INTO orders (order_item_id, customer_id, order_id, order_date, total_amount)
        VALUES (?, ?, ?, ?, ?)`,
       [orderItemGroupId, customer_id, order_id, order_date, total_amount]
     );
@@ -151,7 +151,7 @@ router.get("/history/:customer_id", async (req, res) => {
         'Completed' AS status,
         GROUP_CONCAT(CONCAT(oi.quantity_ordered, 'x ', p.name, ' @ ', FORMAT(oi.quantity_ordered * oi.price_per_unit, 2)) SEPARATOR ', ') AS items,
         okb.total_amount AS total
-      FROM orderkb okb
+      FROM orders okb
       JOIN orderitem oi ON okb.order_id = oi.order_id
       JOIN product p ON oi.product_id = p.product_id
       WHERE okb.customer_id = ?
