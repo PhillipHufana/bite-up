@@ -1,15 +1,40 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import axios from "axios";
 
 function SalesRecord() {
   const lineChartRef = useRef(null);
-  const pieChartRef = useRef(null);
+  const [salesData, setSalesData] = useState([]);
+  const [topSellingItems, setTopSellingItems] = useState([]);
+  const [chartData, setChartData] = useState({
+    profit: [],
+    revenue: [],
+    labels: [],
+  });
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://cdn.jsdelivr.net/npm/chart.js";
-    script.onload = () => {
+    script.onload = async () => {
+      await fetchData();
       initializeCharts();
     };
     document.head.appendChild(script);
@@ -17,129 +42,210 @@ function SalesRecord() {
     return () => {
       document.head.removeChild(script);
     };
-  }, []);
+  }, [selectedMonth, selectedYear]);
+
+  const fetchData = async () => {
+    try {
+      const [weeklyRes, monthlyRes, yearlyRes, profitRes, topItemsRes] =
+        await Promise.all([
+          axios.get("/api/sales/weekly"),
+          axios.get("/api/sales/monthly"),
+          axios.get("/api/sales/yearly"),
+          axios.get("/api/sales/profit"),
+          axios.get("/api/sales/top-items"),
+        ]);
+
+      const getCurrentWeek = () => new Date().getWeekNumber();
+
+      const weeklySales =
+        weeklyRes.data.find((row) => row.week === getCurrentWeek())
+          ?.total_sales || 0;
+      const monthlySales =
+        monthlyRes.data.find((row) => row.month === selectedMonth)
+          ?.total_sales || 0;
+      const yearlySales =
+        yearlyRes.data.find((row) => row.year === selectedYear)?.total_sales ||
+        0;
+
+      setSalesData([
+        {
+          label: "Weekly Sales",
+          value: `P ${weeklySales.toFixed(2)}`,
+          color: "text-blue-600",
+        },
+        {
+          label: `${monthNames[selectedMonth - 1]} Monthly Sales`,
+          value: `P ${monthlySales.toFixed(2)}`,
+          color: "text-purple-600",
+        },
+        {
+          label: `${selectedYear} Yearly Sales`,
+          value: `P ${yearlySales.toFixed(2)}`,
+          color: "text-orange-600",
+        },
+      ]);
+
+      setChartData({
+        labels: weeklyRes.data.map((row) => `Week ${row.week}`),
+        revenue: new Array(weeklyRes.data.length).fill(
+          profitRes.data.total_revenue / weeklyRes.data.length
+        ),
+        profit: new Array(weeklyRes.data.length).fill(
+          profitRes.data.total_profit / weeklyRes.data.length
+        ),
+      });
+
+      setTopSellingItems(
+        topItemsRes.data.map((item, index) => ({
+          rank: index + 1,
+          name: item.product_name,
+          sold: item.total_sold,
+          revenue: `P ${item.revenue.toFixed(2)}`,
+        }))
+      );
+    } catch (err) {
+      console.error("Error fetching sales record data:", err);
+    }
+  };
+
+  Date.prototype.getWeekNumber = function () {
+    const d = new Date(
+      Date.UTC(this.getFullYear(), this.getMonth(), this.getDate())
+    );
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  };
 
   const initializeCharts = () => {
-    if (!window.Chart) return;
+    if (!window.Chart || !lineChartRef.current) return;
 
-    if (lineChartRef.current) {
-      const ctx = lineChartRef.current.getContext("2d");
-      new window.Chart(ctx, {
-        type: "line",
-        data: {
-          labels: ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"],
-          datasets: [
-            {
-              label: "Profit",
-              data: [200, 300, 1100, 800, 300],
-              borderColor: "#E6CA3E",
-              backgroundColor: "rgba(230, 202, 62, 0.3)",
-              fill: true,
-              tension: 0.4,
-              borderWidth: 3,
-            },
-            {
-              label: "Revenue",
-              data: [250, 250, 250, 250, 350],
-              borderColor: "#3F331F",
-              backgroundColor: "rgba(63, 51, 31, 0.1)",
-              fill: false,
-              tension: 0.4,
-              borderWidth: 3,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: "top",
-              labels: {
-                font: {
-                  family:
-                    "Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif",
-                  size: 14,
-                  weight: "bold",
-                },
-                color: "#222222",
-              },
-            },
-            title: {
-              display: true,
-              text: "Weekly Sales Performance and Trends",
+    const ctx = lineChartRef.current.getContext("2d");
+    new window.Chart(ctx, {
+      type: "line",
+      data: {
+        labels: chartData.labels,
+        datasets: [
+          {
+            label: "Profit",
+            data: chartData.profit,
+            borderColor: "#E6CA3E",
+            backgroundColor: "rgba(230, 202, 62, 0.3)",
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3,
+          },
+          {
+            label: "Revenue",
+            data: chartData.revenue,
+            borderColor: "#3F331F",
+            backgroundColor: "rgba(63, 51, 31, 0.1)",
+            fill: false,
+            tension: 0.4,
+            borderWidth: 3,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "top",
+            labels: {
               font: {
-                family:
-                  "Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif",
-                size: 16,
+                family: "Poppins, sans-serif",
+                size: 14,
                 weight: "bold",
               },
               color: "#222222",
             },
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 1200,
-              grid: {
-                color: "rgba(63, 51, 31, 0.2)",
-              },
-              ticks: {
-                color: "#222222",
-                font: {
-                  family:
-                    "Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif",
-                },
+          title: {
+            display: true,
+            text: "Weekly Sales Performance and Trends",
+            font: {
+              family: "Poppins, sans-serif",
+              size: 16,
+              weight: "bold",
+            },
+            color: "#222222",
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: "rgba(63, 51, 31, 0.2)" },
+            ticks: {
+              color: "#222222",
+              font: {
+                family: "Poppins, sans-serif",
               },
             },
-            x: {
-              grid: {
-                color: "rgba(63, 51, 31, 0.2)",
-              },
-              ticks: {
-                color: "#222222",
-                font: {
-                  family:
-                    "Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif",
-                },
+          },
+          x: {
+            grid: { color: "rgba(63, 51, 31, 0.2)" },
+            ticks: {
+              color: "#222222",
+              font: {
+                family: "Poppins, sans-serif",
               },
             },
           },
         },
-      });
-    }
+      },
+    });
   };
-
-  const salesData = [
-    { label: "Today's Sales", value: "P 600.00", color: "text-green-600" },
-    { label: "Weekly Sales", value: "P 3,000.00", color: "text-blue-600" },
-    { label: "Monthly Sales", value: "P 12,000.00", color: "text-purple-600" },
-    { label: "Yearly Sales", value: "P 410.20", color: "text-orange-600" },
-  ];
-
-  const topSellingItems = [
-    { rank: 1, name: "Chocolate Chip Cookies", sold: 3, revenue: "P 200.00" },
-    { rank: 2, name: "Ensaymada", sold: 5, revenue: "P 530.00" },
-    { rank: 3, name: "Cinnamon Roll", sold: 7, revenue: "P 800.00" },
-  ];
 
   return (
     <div className="space-y-6">
       <h2
-        className="text-3xl font-marcellus  mb-12 mt-3"
+        className="text-3xl font-marcellus mb-4 mt-3"
         style={{ color: "#444444" }}
       >
         Sales Record
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="flex gap-4 items-center">
+        <label className="text-sm text-[#444]">Select Month:</label>
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+          className="border rounded px-2 py-1"
+        >
+          {monthNames.map((name, index) => (
+            <option key={index} value={index + 1}>
+              {name}
+            </option>
+          ))}
+        </select>
+
+        <label className="text-sm text-[#444]">Select Year:</label>
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+          className="border rounded px-2 py-1"
+        >
+          {[...Array(5)].map((_, i) => {
+            const year = new Date().getFullYear() - i;
+            return (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            );
+          })}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
         {salesData.map((item, index) => (
           <div
             key={index}
-            className="rounded-xl p-4 text-center"
+            className="rounded-xl p-3 text-center"
             style={{ backgroundColor: "rgba(141, 120, 103, 0.25)" }}
           >
-            <div className={`text-2xl font-bold ${item.color}`}>
+            <div className={`text-3xl font-bold ${item.color}`}>
               {item.value}
             </div>
             <div

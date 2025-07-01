@@ -26,6 +26,7 @@ const Inventory = () => {
       unitPrice: "",
       quantity: "",
       unit: "",
+      purchaseDate: "",
     },
   ]);
 
@@ -142,18 +143,21 @@ const Inventory = () => {
   };
 
   useEffect(() => {
-    const fetchIngredients = async () => {
-      try {
-        const res = await axios.get("/api/ingredients");
-        setIngredients(res.data);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchIngredients();
-  }, []);
+  fetchIngredients();
+}, []);
+
+
+  const fetchIngredients = async () => {
+  try {
+    const res = await axios.get("/api/ingredients");
+    setIngredients(res.data);
+  } catch (err) {
+    console.error("Error fetching data:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const groupByCategory = (items) => {
     return items.reduce((acc, item) => {
@@ -181,20 +185,28 @@ const Inventory = () => {
   };
 
   const handleSave = async (id) => {
-    try {
-      await axios.put(`/api/ingredients/${id}`, editData);
+  try {
+    await axios.put(`/api/ingredients/${id}`, {
+      name: editData.name,
+      brand: editData.brand,
+      unit: editData.unit,
+      price: parseFloat(editData.price),
+      quantity: parseFloat(editData.quantity),
+      cost_per_gram: parseFloat(editData.cost_per_gram),
+      purchase_date: editData.purchaseDate
+    });
 
-      // Automatically delete if quantity becomes 0
-      if (parseFloat(editData.quantity) === 0) {
-        await axios.delete(`/api/ingredients/${id}`);
-      }
-
-      setEditRowId(null);
-      fetchIngredients();
-    } catch (err) {
-      console.error("Update or delete failed:", err);
+    if (parseFloat(editData.quantity) === 0) {
+      await axios.delete(`/api/ingredients/${id}`);
     }
-  };
+
+    setEditRowId(null);
+    await fetchIngredients();
+  } catch (err) {
+    console.error("Update or delete failed:", err.response?.data || err.message);
+  }
+};
+
 
   const handleDelete = async (id) => {
     if (!id || typeof id !== "string") {
@@ -244,42 +256,57 @@ const Inventory = () => {
         unit: "",
         unitPrice: "",
         quantity: "",
+        purchaseDate: "",
       },
     ]);
   };
+const formatDate = (isoString) => {
+  if (!isoString) return "-";
+  try {
+    const date = new Date(isoString);
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return date.toLocaleDateString("en-US", options);
+  } catch {
+    return "-";
+  }
+};
 
   const handleModalSave = async () => {
-    try {
-      if (!formItems || formItems.length === 0) return;
+  try {
+    if (!formItems || formItems.length === 0) return;
 
-      const response = await axios.post("/api/ingredients/bulk", {
-        items: formItems.map((item) => ({
-          category: item.category,
-          name: item.itemName,
-          brand: item.brand,
-          unit: item.unit,
-          quantity: Number.parseFloat(item.quantity),
-          price: Number.parseFloat(item.unitPrice),
-          purchase_date: new Date().toISOString().split("T")[0],
-        })),
-      });
+    const response = await axios.post("/api/ingredients/bulk", {
+      items: formItems.map((item) => ({
+        category: item.category,
+        name: item.itemName,
+        brand: item.brand,
+        unit: item.unit,
+        quantity: Number.parseFloat(item.quantity),
+        price: Number.parseFloat(item.unitPrice),
+        cost_per_gram: 0, // Default to 0 if not computed yet
+        purchase_date: item.purchaseDate,
 
-      setShowModal(false);
-      setFormItems([
-        {
-          category: "",
-          itemName: "",
-          brand: "",
-          unit: "",
-          unitPrice: "",
-          quantity: "",
-        },
-      ]);
-      fetchIngredients();
-    } catch (err) {
-      console.error("Error saving multiple items:", err);
-    }
-  };
+      })),
+    });
+
+    setShowModal(false);
+    setFormItems([
+      {
+        category: "",
+        itemName: "",
+        brand: "",
+        unit: "",
+        unitPrice: "",
+        quantity: "",
+        purchaseDate: "",
+      },
+    ]);
+    await fetchIngredients(); // Use await to ensure update
+  } catch (err) {
+    console.error("Error saving multiple items:", err.response?.data || err.message);
+  }
+};
+
 
   const groupedData = groupByCategory(ingredients);
 
@@ -370,9 +397,6 @@ const Inventory = () => {
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
                                 Qty
-                              </th>
-                              <th className="px-4 py-3 text-left font-semibold">
-                                ML→G
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
                                 Cost/g
@@ -466,20 +490,6 @@ const Inventory = () => {
                                   <td className="px-4 py-3">
                                     {isEditing ? (
                                       <input
-                                        name="ml_to_gram_conversion"
-                                        value={editData.ml_to_gram_conversion}
-                                        onChange={handleChange}
-                                        type="number"
-                                        step="0.00001"
-                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
-                                      />
-                                    ) : (
-                                      item.ml_to_gram_conversion
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    {isEditing ? (
-                                      <input
                                         name="cost_per_gram"
                                         value={editData.cost_per_gram}
                                         onChange={handleChange}
@@ -491,8 +501,22 @@ const Inventory = () => {
                                       item.cost_per_gram
                                     )}
                                   </td>
+                                  {/* <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="cost_per_gram"
+                                        value={editData.purc}
+                                        onChange={handleChange}
+                                        type="number"
+                                        step="0.00001"
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      item.cost_per_gram
+                                    )}
+                                  </td> */}
                                   <td className="px-4 py-3">
-                                    {item.purchase_date}
+                                    {formatDate(item.purchase_date)}
                                   </td>
                                   <td className="px-4 py-3">
                                     <div className="flex space-x-2">
@@ -719,11 +743,11 @@ const Inventory = () => {
                         <Select
                           placeholder="Select unit..."
                           options={[
-                            { label: "Grams (g)", value: "grams" },
+                            { label: "Grams (g)", value: "g" },
                             { label: "Kilograms (kg)", value: "kg" },
                             { label: "Milliliters (ml)", value: "ml" },
                             { label: "Liters (l)", value: "l" },
-                            { label: "Pieces (pc)", value: "piece" },
+                            { label: "Pieces (pc)", value: "pc" },
                           ]}
                           value={
                             item.unit
@@ -775,6 +799,20 @@ const Inventory = () => {
                           placeholder="0.00"
                           min="0"
                           step="0.01"
+                        />
+                      </div>
+                      {/* Purchase Date */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
+                          Purchase Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={item.purchaseDate}
+                          onChange={(e) =>
+                            updateFormItem(index, "purchaseDate", e.target.value)
+                          }
+                          className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
                         />
                       </div>
                     </div>

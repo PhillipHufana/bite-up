@@ -9,7 +9,7 @@ router.get("/", async (req, res) => {
     const [results] = await db.query(`
       SELECT 
         ingredient_id, name, category, brand, unit, price, 
-        quantity, ml_to_gram_conversion, cost_per_gram, purchase_date 
+        quantity, cost_per_gram, purchase_date 
       FROM ingredient
     `);
     res.json(results);
@@ -53,32 +53,39 @@ router.post("/bulk", async (req, res) => {
         unit,
         price,
         quantity,
-        ml_to_gram_conversion,
         cost_per_gram,
         purchase_date,
       } = item;
 
       if (!name || !category || price == null || quantity == null) continue;
 
-      // Normalize unit and convert quantity
       let convertedQty = parseFloat(quantity);
       let normalizedUnit = unit.toLowerCase();
 
       switch (normalizedUnit) {
+        case "grams":
+        case "gr":
+        case "g":
+          normalizedUnit = "g";
+          break;
+        case "kilograms":
         case "kg":
           convertedQty *= 1000;
           normalizedUnit = "g";
           break;
+        case "milliliters":
+        case "ml":
+          normalizedUnit = "ml";
+          break;
+        case "liters":
         case "l":
           convertedQty *= 1000;
           normalizedUnit = "ml";
           break;
-        case "gr":
-          normalizedUnit = "g";
-          break;
-        case "ml":
-        case "g":
+        case "pieces":
+        case "piece":
         case "pc":
+          normalizedUnit = "pc";
           break;
         default:
           console.warn(`Unsupported unit: ${unit}`);
@@ -91,6 +98,7 @@ router.post("/bulk", async (req, res) => {
       );
 
       if (existingRows.length > 0) {
+        // ✅ Use UPDATE here!
         const existing = existingRows[0];
         const incomingPrice = parseFloat(price);
         const currentPrice = parseFloat(existing.price);
@@ -99,12 +107,11 @@ router.post("/bulk", async (req, res) => {
 
         await db.query(
           `UPDATE ingredient 
-           SET price = ?, quantity = ?, ml_to_gram_conversion = ?, cost_per_gram = ?, purchase_date = ?, unit = ?
+           SET price = ?, quantity = ?, cost_per_gram = ?, purchase_date = ?, unit = ?
            WHERE ingredient_id = ?`,
           [
             updatedPrice,
             updatedQuantity,
-            parseFloat(ml_to_gram_conversion) || 0,
             parseFloat(cost_per_gram) || 0,
             purchase_date || new Date().toISOString().split("T")[0],
             normalizedUnit,
@@ -117,8 +124,8 @@ router.post("/bulk", async (req, res) => {
         const newId = await generateNextId();
         await db.query(
           `INSERT INTO ingredient 
-           (ingredient_id, name, category, brand, unit, price, quantity, ml_to_gram_conversion, cost_per_gram, purchase_date)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (ingredient_id, name, category, brand, unit, price, quantity, cost_per_gram, purchase_date)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             newId,
             name,
@@ -127,7 +134,6 @@ router.post("/bulk", async (req, res) => {
             normalizedUnit,
             parseFloat(price),
             convertedQty,
-            parseFloat(ml_to_gram_conversion) || 0,
             parseFloat(cost_per_gram) || 0,
             purchase_date || new Date().toISOString().split("T")[0],
           ]
@@ -143,6 +149,7 @@ router.post("/bulk", async (req, res) => {
   }
 });
 
+
 // UPDATE ingredient
 router.put("/:id", async (req, res) => {
   const { id } = req.params;
@@ -152,7 +159,6 @@ router.put("/:id", async (req, res) => {
     unit,
     price,
     quantity,
-    ml_to_gram_conversion,
     cost_per_gram,
     purchase_date,
   } = req.body;
@@ -160,8 +166,7 @@ router.put("/:id", async (req, res) => {
   try {
     await db.query(
       `UPDATE ingredient 
-       SET name = ?, brand = ?, unit = ?, price = ?, quantity = ?, 
-           ml_to_gram_conversion = ?, cost_per_gram = ?, purchase_date = ?
+       SET name = ?, brand = ?, unit = ?, price = ?, quantity = ?, cost_per_gram = ?, purchase_date = ?
        WHERE ingredient_id = ?`,
       [
         name,
@@ -169,7 +174,6 @@ router.put("/:id", async (req, res) => {
         unit,
         parseFloat(price),
         parseFloat(quantity),
-        parseFloat(ml_to_gram_conversion),
         parseFloat(cost_per_gram),
         purchase_date,
         id,
