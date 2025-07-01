@@ -1,27 +1,29 @@
-import { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import Navbar from "../components/Navbar"
+"use client";
+
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import Navbar from "../components/navbar";
 
 const CostingCalculator = () => {
-  const [selectedProduct, setSelectedProduct] = useState(0)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [products, setProducts] = useState([])
-  const [currentProduct, setCurrentProduct] = useState(null)
+  const [selectedProduct, setSelectedProduct] = useState(0);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [currentProduct, setCurrentProduct] = useState(null);
 
   // Fetch products from backend
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/products")
-        const data = await res.json()
-        setProducts(data)
-        setCurrentProduct(data[0])
+        const res = await axios.get("/api/catalog");
+        setProducts(res.data);
+        setCurrentProduct(res.data[0]);
       } catch (err) {
-        console.error("Error fetching products:", err)
+        console.error("Error fetching products:", err);
       }
-    }
-    fetchProducts()
-  }, [])
+    };
+    fetchProducts();
+  }, []);
 
   // Fetch product details when selection changes
   useEffect(() => {
@@ -32,11 +34,10 @@ const CostingCalculator = () => {
           console.error("Product not found in list");
           return;
         }
-        
-        const res = await fetch(`http://localhost:3001/api/products/${selected.id}`);
-        if (!res.ok) throw new Error("Failed to fetch product details");
-        
-        const ingredients = await res.json();
+
+        const res = await axios.get(`/api/catalog/${selected.id}`);
+        const ingredients = res.data;
+
         setCurrentProduct({
           ...selected,
           ingredients: Array.isArray(ingredients) ? ingredients : [],
@@ -49,10 +50,12 @@ const CostingCalculator = () => {
         });
       }
     };
+
     fetchProductDetails();
   }, [selectedProduct, products]);
 
-  if (!currentProduct || !currentProduct.ingredients) return <div>Loading...</div>
+  if (!currentProduct || !currentProduct.ingredients)
+    return <div>Loading...</div>;
 
   return (
     <div className="min-h-screen bg-amber-50">
@@ -60,16 +63,24 @@ const CostingCalculator = () => {
       <div className="flex h-[calc(100vh-80px)] bg-amber-50">
         {/* Sidebar */}
         <div
-          className={`${sidebarCollapsed ? "w-16" : "w-80"} transition-all duration-300 bg-white shadow-lg border-r border-amber-200 flex flex-col`}
+          className={`${
+            sidebarCollapsed ? "w-16" : "w-80"
+          } transition-all duration-300 bg-white shadow-lg border-r border-amber-200 flex flex-col`}
         >
           {/* Sidebar Header */}
           <div className="p-4 border-b border-amber-200 flex items-center justify-between">
-            {!sidebarCollapsed && <h2 className="text-lg font-semibold text-amber-900">Products</h2>}
+            {!sidebarCollapsed && (
+              <h2 className="text-lg font-semibold text-amber-900">Products</h2>
+            )}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="p-2 rounded-lg hover:bg-amber-100 text-amber-700 transition-colors"
             >
-              {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+              {sidebarCollapsed ? (
+                <ChevronRight size={20} />
+              ) : (
+                <ChevronLeft size={20} />
+              )}
             </button>
           </div>
           {/* Product List */}
@@ -86,15 +97,23 @@ const CostingCalculator = () => {
                   sidebarCollapsed ? "p-2" : "p-4"
                 } border rounded-lg mb-2 cursor-pointer transition-all duration-200 hover:shadow-md`}
               >
-                <div className={`flex items-center ${sidebarCollapsed ? "justify-center" : "space-x-3"}`}>
+                <div
+                  className={`flex items-center ${
+                    sidebarCollapsed ? "justify-center" : "space-x-3"
+                  }`}
+                >
                   <img
                     src="/placeholder.svg?height=80&width=80"
                     alt={product.name}
-                    className={`${sidebarCollapsed ? "w-8 h-8" : "w-16 h-16"} object-cover rounded-lg border border-amber-200`}
+                    className={`${
+                      sidebarCollapsed ? "w-8 h-8" : "w-16 h-16"
+                    } object-cover rounded-lg border border-amber-200`}
                   />
                   {!sidebarCollapsed && (
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-amber-900 text-sm leading-tight">{product.name}</h3>
+                      <h3 className="font-medium text-amber-900 text-sm leading-tight">
+                        {product.name}
+                      </h3>
                     </div>
                   )}
                 </div>
@@ -107,74 +126,63 @@ const CostingCalculator = () => {
           <div className="p-6 lg:p-8">
             {/* Header */}
             <div className="text-center mb-8">
-              <h1 className="text-2xl lg:text-4xl font-[Marcellus] text-amber-900 mb-5">{currentProduct.name}</h1>
-              <h2 className="text-xl lg:text-2xl font-[Poppins] font-bold text-gray-800 mb-10">Total Food Costing</h2>
+              <h1 className="text-2xl lg:text-4xl font-[Marcellus] text-amber-900 mb-5">
+                {currentProduct.name}
+              </h1>
+              <h2 className="text-xl lg:text-2xl font-[Poppins] font-bold text-gray-800 mb-10">
+                Total Food Costing
+              </h2>
             </div>
             {/* Cost Information Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-8">
-              {/* Left Column - Production Details */}
+              {/* Left Column */}
               <div className="space-y-4">
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Production Date: </span>
-                  <span className="font-semibold text-gray-900">{currentProduct.productionDate}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Desired Quantity (% of Full Recipe)</span>
-                  <span className="font-semibold text-gray-900">{currentProduct.desiredQuantity}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Desired # of Portions</span>
-                  <span className="font-semibold text-gray-900">{currentProduct.desiredPortions}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Total Ingredient Weight (Grams)</span>
-                  <span className="font-semibold text-gray-900">{currentProduct.totalIngredientWeight}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Ingredient Weight per Portion (Grams)</span>
-                  <span className="font-semibold text-gray-900">{currentProduct.ingredientWeightPerPortion}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Suggested Selling Price Per Portion</span>
-                  <span className="font-semibold text-gray-900">{currentProduct.suggestedSellingPrice}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">
-                    Total Sales (If all {currentProduct.desiredPortions} portions sold)
-                  </span>
-                  <span className="font-semibold text-gray-900">{currentProduct.totalSales}</span>
-                </div>
+                {[
+                  ["Production Date", currentProduct.productionDate],
+                  ["Desired Quantity (% of Full Recipe)", currentProduct.desiredQuantity],
+                  ["Desired # of Portions", currentProduct.desiredPortions],
+                  ["Total Ingredient Weight (Grams)", currentProduct.totalIngredientWeight],
+                  ["Ingredient Weight per Portion (Grams)", currentProduct.ingredientWeightPerPortion],
+                  ["Suggested Selling Price Per Portion", currentProduct.suggestedSellingPrice],
+                  [
+                    `Total Sales (If all ${currentProduct.desiredPortions} portions sold)`,
+                    currentProduct.totalSales,
+                  ],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex justify-between items-center py-2 border-b border-gray-200"
+                  >
+                    <span className="font-medium text-gray-700">{label}</span>
+                    <span className="font-semibold text-gray-900">{value}</span>
+                  </div>
+                ))}
               </div>
-              {/* Right Column - Cost Breakdown */}
+              {/* Right Column */}
               <div className="space-y-4">
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">(Less) Total Cost of Ingredients</span>
-                  <span className="font-semibold text-gray-900">₱{(currentProduct.totalCostIngredients || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">(Less) Overhead/Op Expense (40%)</span>
-                  <span className="font-semibold text-gray-900">{currentProduct.overheadExpense}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Net Profit of All Portions Sold</span>
-                  <span className="font-semibold text-gray-900">{currentProduct.netProfit}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Cost of Ingredients per Portion</span>
-                  <span className="font-semibold text-gray-900">{currentProduct.costPerPortion}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Food Cost %</span>
-                  <span className="font-semibold text-green-600">{currentProduct.foodCostPercentage}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Profit per Portion</span>
-                  <span className="font-semibold text-gray-900">{currentProduct.profitPerPortion}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Profit Margin</span>
-                  <span className="font-semibold text-green-600">{currentProduct.profitMargin}</span>
-                </div>
+                {[
+                  ["(Less) Total Cost of Ingredients", `₱${(currentProduct.totalCostIngredients || 0).toFixed(2)}`],
+                  ["(Less) Overhead/Op Expense (40%)", currentProduct.overheadExpense],
+                  ["Net Profit of All Portions Sold", currentProduct.netProfit],
+                  ["Cost of Ingredients per Portion", currentProduct.costPerPortion],
+                  ["Food Cost %", currentProduct.foodCostPercentage, true],
+                  ["Profit per Portion", currentProduct.profitPerPortion],
+                  ["Profit Margin", currentProduct.profitMargin, true],
+                ].map(([label, value, highlight]) => (
+                  <div
+                    key={label}
+                    className="flex justify-between items-center py-2 border-b border-gray-200"
+                  >
+                    <span className="font-medium text-gray-700">{label}</span>
+                    <span
+                      className={`font-semibold ${
+                        highlight ? "text-green-600" : "text-gray-900"
+                      }`}
+                    >
+                      {value}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
             {/* Ingredients Table */}
@@ -183,25 +191,51 @@ const CostingCalculator = () => {
                 <table className="w-full">
                   <thead className="bg-amber-100 border-b border-gray-200">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Ingredients</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Brand</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Unit of Measure</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Quantity</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Grams</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Cost</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Price Increase</th>
+                      {[
+                        "Ingredients",
+                        "Brand",
+                        "Unit of Measure",
+                        "Quantity",
+                        "Grams",
+                        "Cost",
+                        "Price Increase",
+                      ].map((header) => (
+                        <th
+                          key={header}
+                          className="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                        >
+                          {header}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {currentProduct.ingredients.map((ingredient, index) => (
-                      <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                        <td className="px-4 py-3 text-sm text-gray-900">{ingredient.name}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{ingredient.brand}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{ingredient.unit}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{ingredient.quantity}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{ingredient.grams}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ingredient.cost}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ingredient.cost}</td>
+                      <tr
+                        key={index}
+                        className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                      >
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {ingredient.name}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {ingredient.brand}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {ingredient.unit}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {ingredient.quantity}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {ingredient.grams}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                          {ingredient.cost}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                          {ingredient.cost}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -212,7 +246,7 @@ const CostingCalculator = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default CostingCalculator
+export default CostingCalculator;

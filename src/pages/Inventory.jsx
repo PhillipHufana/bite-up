@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import axios from "axios"
-import CreatableSelect from "react-select/creatable"
-import Select from "react-select"
-import { ChevronDown, ChevronUp, Edit, Trash2, X, Plus } from "lucide-react"
-import Navbar from "../components/Navbar"
+import { useState, useEffect } from "react";
+import axios from "axios";
+import CreatableSelect from "react-select/creatable";
+import Select from "react-select";
+import { ChevronDown, ChevronUp, Edit, Trash2, X, Plus } from "lucide-react";
+import Navbar from "../components/navbar";
 
 const Inventory = () => {
-  const [ingredients, setIngredients] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [editRowId, setEditRowId] = useState(null)
-  const [editData, setEditData] = useState({})
-  const [expandedCategories, setExpandedCategories] = useState({})
-  const [showModal, setShowModal] = useState(false)
-  const [highlightedRowId, setHighlightedRowId] = useState({})
-  const [deletingId, setDeletingId] = useState(null)
+  const [ingredients, setIngredients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editRowId, setEditRowId] = useState(null);
+  const [editData, setEditData] = useState({});
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [showModal, setShowModal] = useState(false);
+  const [highlightedRowId, setHighlightedRowId] = useState({});
+  const [deletingId, setDeletingId] = useState(null);
 
   //Form state for modal
   const [formItems, setFormItems] = useState([
@@ -27,7 +27,7 @@ const Inventory = () => {
       quantity: "",
       unit: "",
     },
-  ])
+  ]);
 
   // Custom styles for react-select
   const customSelectStyles = {
@@ -69,7 +69,8 @@ const Inventory = () => {
       backgroundColor: "#fffbeb", // amber-50
       border: "2px solid #fbbf24", // amber-400
       borderRadius: "0.75rem",
-      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      boxShadow:
+        "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
       zIndex: 9999,
       maxHeight: "200px",
       overflowY: "auto",
@@ -101,8 +102,8 @@ const Inventory = () => {
       backgroundColor: state.isSelected
         ? "#d97706" // amber-600
         : state.isFocused
-          ? "#fde68a" // amber-200
-          : "transparent",
+        ? "#fde68a" // amber-200
+        : "transparent",
       color: state.isSelected ? "#ffffff" : "#92400e", // white : amber-800
       padding: "12px 16px",
       borderRadius: "0.5rem",
@@ -122,7 +123,9 @@ const Inventory = () => {
       ...provided,
       color: "#d97706", // amber-600
       padding: "0 8px",
-      transform: state.selectProps.menuIsOpen ? "rotate(180deg)" : "rotate(0deg)",
+      transform: state.selectProps.menuIsOpen
+        ? "rotate(180deg)"
+        : "rotate(0deg)",
       transition: "transform 0.2s ease",
       "&:hover": {
         color: "#92400e", // amber-800
@@ -136,98 +139,100 @@ const Inventory = () => {
         color: "#dc2626", // red-600
       },
     }),
-  }
+  };
 
   useEffect(() => {
-    fetchIngredients()
-  }, [])
-
-  const fetchIngredients = async () => {
-    try {
-      const res = await axios.get("http://localhost:3001/api/ingredients")
-      setIngredients(res.data)
-      setLoading(false)
-    } catch (err) {
-      console.error("Error fetching data:", err)
-      setLoading(false)
-    }
-  }
+    const fetchIngredients = async () => {
+      try {
+        const res = await axios.get("/api/ingredients");
+        setIngredients(res.data);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchIngredients();
+  }, []);
 
   const groupByCategory = (items) => {
     return items.reduce((acc, item) => {
-      if (!acc[item.category]) acc[item.category] = []
-      acc[item.category].push(item)
-      return acc
-    }, {})
-  }
+      if (!acc[item.category]) acc[item.category] = [];
+      acc[item.category].push(item);
+      return acc;
+    }, {});
+  };
 
   const toggleCategory = (category) => {
     setExpandedCategories((prev) => ({
       ...prev,
       [category]: !prev[category],
-    }))
-  }
+    }));
+  };
 
   const handleEditClick = (item) => {
-    setEditRowId(item.ingredient_id)
-    setEditData(item)
-  }
+    setEditRowId(item.ingredient_id);
+    setEditData(item);
+  };
 
-const handleChange = (e) => {
-  const { name, value } = e.target;
-  setEditData((prev) => ({ ...prev, [name]: value }));
-};
-
-
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSave = async (id) => {
-  try {
-    await axios.put(`http://localhost:3001/api/ingredients/${id}`, editData);
+    try {
+      await axios.put(`/api/ingredients/${id}`, editData);
 
-    // Automatically delete if quantity becomes 0
-    if (parseFloat(editData.quantity) === 0) {
-      await axios.delete(`http://localhost:3001/api/ingredients/${id}`);
+      // Automatically delete if quantity becomes 0
+      if (parseFloat(editData.quantity) === 0) {
+        await axios.delete(`/api/ingredients/${id}`);
+      }
+
+      setEditRowId(null);
+      fetchIngredients();
+    } catch (err) {
+      console.error("Update or delete failed:", err);
     }
-
-    setEditRowId(null);
-    fetchIngredients();
-  } catch (err) {
-    console.error("Update or delete failed:", err);
-  }
-};
+  };
 
   const handleDelete = async (id) => {
     if (!id || typeof id !== "string") {
-      console.warn("Invalid ingredient_id:", id)
-      return
+      console.warn("Invalid ingredient_id:", id);
+      return;
     }
 
     if (window.confirm("Are you sure you want to delete this item?")) {
       try {
-        setDeletingId(id)
-        await axios.delete(`http://localhost:3001/api/ingredients/${id}`)
-        await fetchIngredients()
+        setDeletingId(id);
+        await axios.delete(`/api/ingredients/${id}`);
+        await fetchIngredients();
       } catch (err) {
-        console.error("Delete failed:", err.response?.data?.error || err.message)
-        alert(`Error: ${err.response?.data?.error || "Check console for details"}`)
+        console.error(
+          "Delete failed:",
+          err.response?.data?.error || err.message
+        );
+        alert(
+          `Error: ${err.response?.data?.error || "Check console for details"}`
+        );
       } finally {
-        setDeletingId(null)
+        setDeletingId(null);
       }
     }
-  }
+  };
 
   //Modal Form Handlers
   const updateFormItem = (index, field, value) => {
-    const updatedItems = [...formItems]
-    updatedItems[index][field] = value
-    setFormItems(updatedItems)
-  }
+    const updatedItems = [...formItems];
+    updatedItems[index][field] = value;
+    setFormItems(updatedItems);
+  };
 
   const removeFormItem = (index) => {
-    const updatedItems = [...formItems]
-    updatedItems.splice(index, 1)
-    setFormItems(updatedItems)
-  }
+    const updatedItems = [...formItems];
+    updatedItems.splice(index, 1);
+    setFormItems(updatedItems);
+  };
 
   const addNewFormItem = () => {
     setFormItems((prev) => [
@@ -240,14 +245,14 @@ const handleChange = (e) => {
         unitPrice: "",
         quantity: "",
       },
-    ])
-  }
+    ]);
+  };
 
   const handleModalSave = async () => {
     try {
-      if (!formItems || formItems.length === 0) return
+      if (!formItems || formItems.length === 0) return;
 
-      const response = await axios.post("http://localhost:3001/api/ingredients/bulk", {
+      const response = await axios.post("/api/ingredients/bulk", {
         items: formItems.map((item) => ({
           category: item.category,
           name: item.itemName,
@@ -257,9 +262,9 @@ const handleChange = (e) => {
           price: Number.parseFloat(item.unitPrice),
           purchase_date: new Date().toISOString().split("T")[0],
         })),
-      })
+      });
 
-      setShowModal(false)
+      setShowModal(false);
       setFormItems([
         {
           category: "",
@@ -269,27 +274,35 @@ const handleChange = (e) => {
           unitPrice: "",
           quantity: "",
         },
-      ])
-      fetchIngredients()
+      ]);
+      fetchIngredients();
     } catch (err) {
-      console.error("Error saving multiple items:", err)
+      console.error("Error saving multiple items:", err);
     }
-  }
+  };
 
-  const groupedData = groupByCategory(ingredients)
+  const groupedData = groupByCategory(ingredients);
 
   const getItemNamesByCategory = (category) => {
-    return Array.from(new Set(ingredients.filter((i) => i.category === category).map((i) => i.name))).map((n) => ({
+    return Array.from(
+      new Set(
+        ingredients.filter((i) => i.category === category).map((i) => i.name)
+      )
+    ).map((n) => ({
       label: n,
       value: n,
-    }))
-  }
+    }));
+  };
 
   const getBrandsByCategoryAndItem = (category, itemName) => {
     return Array.from(
-      new Set(ingredients.filter((i) => i.category === category && i.name === itemName).map((i) => i.brand)),
-    ).map((b) => ({ label: b, value: b }))
-  }
+      new Set(
+        ingredients
+          .filter((i) => i.category === category && i.name === itemName)
+          .map((i) => i.brand)
+      )
+    ).map((b) => ({ label: b, value: b }));
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
@@ -298,7 +311,9 @@ const handleChange = (e) => {
 
       <main className="container mx-auto px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-          <h2 className="font-[Marcellus] text-8xl sm:text-4xl font-bold text-amber-800">General Inventory</h2>
+          <h2 className="font-[Marcellus] text-8xl sm:text-4xl font-bold text-amber-800">
+            General Inventory
+          </h2>
           <button
             onClick={() => setShowModal(true)}
             className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center cursor-pointer space-x-2"
@@ -316,12 +331,17 @@ const handleChange = (e) => {
         ) : (
           <div className="space-y-4">
             {Object.entries(groupedData).map(([category, items]) => (
-              <div key={category} className="bg-amber-100 rounded-lg shadow-md overflow-hidden">
+              <div
+                key={category}
+                className="bg-amber-100 rounded-lg shadow-md overflow-hidden"
+              >
                 <button
                   onClick={() => toggleCategory(category)}
                   className="cursor-pointer w-full px-6 py-4 bg-gradient-to-r from-amber-200 to-orange-200 hover:from-amber-300 hover:to-orange-300 flex justify-between items-center transition-all duration-200"
                 >
-                  <span className="text-lg font-semibold text-amber-900">{category}</span>
+                  <span className="text-lg font-semibold text-amber-900">
+                    {category}
+                  </span>
                   {expandedCategories[category] ? (
                     <ChevronUp className="w-6 h-6 text-amber-700" />
                   ) : (
@@ -336,24 +356,47 @@ const handleChange = (e) => {
                         <table className="w-full">
                           <thead>
                             <tr className="bg-amber-200 text-amber-900">
-                              <th className="px-4 py-3 text-left font-semibold">Item</th>
-                              <th className="px-4 py-3 text-left font-semibold">Brand</th>
-                              <th className="px-4 py-3 text-left font-semibold">Unit</th>
-                              <th className="px-4 py-3 text-left font-semibold">Price</th>
-                              <th className="px-4 py-3 text-left font-semibold">Qty</th>
-                              <th className="px-4 py-3 text-left font-semibold">Cost/g</th>
-                              <th className="px-4 py-3 text-left font-semibold">Purchase Date</th>
-                              <th className="px-4 py-3 text-left font-semibold">Actions</th>
+                              <th className="px-4 py-3 text-left font-semibold">
+                                Item
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
+                                Brand
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
+                                Unit
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
+                                Price
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
+                                Qty
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
+                                ML→G
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
+                                Cost/g
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
+                                Purchase Date
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
+                                Actions
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
                             {items.map((item) => {
-                              const isEditing = editRowId === item.ingredient_id
+                              const isEditing =
+                                editRowId === item.ingredient_id;
                               return (
                                 <tr
                                   key={item.ingredient_id}
                                   className={
-                                    Array.isArray(highlightedRowId) && highlightedRowId.includes(item.ingredient_id)
+                                    Array.isArray(highlightedRowId) &&
+                                    highlightedRowId.includes(
+                                      item.ingredient_id
+                                    )
                                       ? "bg-yellow-200 transition-colors duration-300"
                                       : ""
                                   }
@@ -448,12 +491,16 @@ const handleChange = (e) => {
                                       item.cost_per_gram
                                     )}
                                   </td>
-                                  <td className="px-4 py-3">{item.purchase_date}</td>
+                                  <td className="px-4 py-3">
+                                    {item.purchase_date}
+                                  </td>
                                   <td className="px-4 py-3">
                                     <div className="flex space-x-2">
                                       {isEditing ? (
                                         <button
-                                          onClick={() => handleSave(item.ingredient_id)}
+                                          onClick={() =>
+                                            handleSave(item.ingredient_id)
+                                          }
                                           className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-semibold transition-colors"
                                         >
                                           Save
@@ -461,17 +508,24 @@ const handleChange = (e) => {
                                       ) : (
                                         <>
                                           <button
-                                            onClick={() => handleEditClick(item)}
+                                            onClick={() =>
+                                              handleEditClick(item)
+                                            }
                                             className="text-amber-600 hover:text-amber-800 transition-colors"
                                           >
                                             <Edit className="w-4 h-4" />
                                           </button>
                                           <button
-                                            onClick={() => handleDelete(item.ingredient_id)}
+                                            onClick={() =>
+                                              handleDelete(item.ingredient_id)
+                                            }
                                             className="text-red-600 hover:text-red-800 transition-colors"
                                           >
-                                            {deletingId === item.ingredient_id ? (
-                                              <span className="text-xs text-gray-500 animate-pulse">Deleting...</span>
+                                            {deletingId ===
+                                            item.ingredient_id ? (
+                                              <span className="text-xs text-gray-500 animate-pulse">
+                                                Deleting...
+                                              </span>
                                             ) : (
                                               <Trash2 className="w-4 h-4" />
                                             )}
@@ -481,13 +535,15 @@ const handleChange = (e) => {
                                     </div>
                                   </td>
                                 </tr>
-                              )
+                              );
                             })}
                           </tbody>
                         </table>
                       </div>
                     ) : (
-                      <p className="text-amber-700 text-center py-8">No items in this category</p>
+                      <p className="text-amber-700 text-center py-8">
+                        No items in this category
+                      </p>
                     )}
                   </div>
                 )}
@@ -504,7 +560,9 @@ const handleChange = (e) => {
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-amber-700 to-orange-900 px-8 py-2 flex justify-between items-center">
               <div>
-                <h3 className="text-2xl font-bold text-white mb-1">Add New Items</h3>
+                <h3 className="text-2xl font-bold text-white mb-1">
+                  Add New Items
+                </h3>
               </div>
               <button
                 onClick={() => setShowModal(false)}
@@ -529,8 +587,12 @@ const handleChange = (e) => {
                           {index + 1}
                         </div>
                         <div>
-                          <h4 className="text-xl font-bold text-amber-800">Item {index + 1}</h4>
-                          <p className="text-amber-600 text-sm">Enter the item details below</p>
+                          <h4 className="text-xl font-bold text-amber-800">
+                            Item {index + 1}
+                          </h4>
+                          <p className="text-amber-600 text-sm">
+                            Enter the item details below
+                          </p>
                         </div>
                       </div>
                       {formItems.length > 1 && (
@@ -553,10 +615,24 @@ const handleChange = (e) => {
                         <CreatableSelect
                           isClearable
                           placeholder="Select or create category..."
-                          onChange={(selected) => updateFormItem(index, "category", selected ? selected.value : "")}
-                          onCreateOption={(inputValue) => updateFormItem(index, "category", inputValue)}
-                          value={item.category ? { label: item.category, value: item.category } : null}
-                          options={Array.from(new Set(ingredients.map((i) => i.category))).map((c) => ({
+                          onChange={(selected) =>
+                            updateFormItem(
+                              index,
+                              "category",
+                              selected ? selected.value : ""
+                            )
+                          }
+                          onCreateOption={(inputValue) =>
+                            updateFormItem(index, "category", inputValue)
+                          }
+                          value={
+                            item.category
+                              ? { label: item.category, value: item.category }
+                              : null
+                          }
+                          options={Array.from(
+                            new Set(ingredients.map((i) => i.category))
+                          ).map((c) => ({
                             label: c,
                             value: c,
                           }))}
@@ -574,18 +650,30 @@ const handleChange = (e) => {
                           isClearable
                           placeholder="Select or create item..."
                           onChange={(selected) => {
-                            updateFormItem(index, "itemName", selected ? selected.value : "")
-                            updateFormItem(index, "brand", "") // reset brand when item changes
+                            updateFormItem(
+                              index,
+                              "itemName",
+                              selected ? selected.value : ""
+                            );
+                            updateFormItem(index, "brand", ""); // reset brand when item changes
                           }}
-                          onCreateOption={(inputValue) => updateFormItem(index, "itemName", inputValue)}
-                          value={item.itemName ? { label: item.itemName, value: item.itemName } : null}
+                          onCreateOption={(inputValue) =>
+                            updateFormItem(index, "itemName", inputValue)
+                          }
+                          value={
+                            item.itemName
+                              ? { label: item.itemName, value: item.itemName }
+                              : null
+                          }
                           options={getItemNamesByCategory(item.category)}
                           styles={customSelectStyles}
                           classNamePrefix="react-select"
                           isDisabled={!item.category}
                         />
                         {!item.category && (
-                          <p className="text-xs text-amber-600 mt-1">Please select a category first</p>
+                          <p className="text-xs text-amber-600 mt-1">
+                            Please select a category first
+                          </p>
                         )}
                       </div>
 
@@ -597,10 +685,24 @@ const handleChange = (e) => {
                         <CreatableSelect
                           isClearable
                           placeholder="Select or create brand..."
-                          onChange={(selected) => updateFormItem(index, "brand", selected ? selected.value : "")}
-                          onCreateOption={(inputValue) => updateFormItem(index, "brand", inputValue)}
-                          value={item.brand ? { label: item.brand, value: item.brand } : null}
-                          options={Array.from(new Set(ingredients.map((i) => i.brand))).map((b) => ({
+                          onChange={(selected) =>
+                            updateFormItem(
+                              index,
+                              "brand",
+                              selected ? selected.value : ""
+                            )
+                          }
+                          onCreateOption={(inputValue) =>
+                            updateFormItem(index, "brand", inputValue)
+                          }
+                          value={
+                            item.brand
+                              ? { label: item.brand, value: item.brand }
+                              : null
+                          }
+                          options={Array.from(
+                            new Set(ingredients.map((i) => i.brand))
+                          ).map((b) => ({
                             label: b,
                             value: b,
                           }))}
@@ -623,8 +725,18 @@ const handleChange = (e) => {
                             { label: "Liters (l)", value: "l" },
                             { label: "Pieces (pc)", value: "piece" },
                           ]}
-                          value={item.unit ? { label: item.unit, value: item.unit } : null}
-                          onChange={(selected) => updateFormItem(index, "unit", selected ? selected.value : "")}
+                          value={
+                            item.unit
+                              ? { label: item.unit, value: item.unit }
+                              : null
+                          }
+                          onChange={(selected) =>
+                            updateFormItem(
+                              index,
+                              "unit",
+                              selected ? selected.value : ""
+                            )
+                          }
                           styles={customSelectStyles}
                           classNamePrefix="react-select"
                         />
@@ -638,7 +750,9 @@ const handleChange = (e) => {
                         <input
                           type="number"
                           value={item.quantity || ""}
-                          onChange={(e) => updateFormItem(index, "quantity", e.target.value)}
+                          onChange={(e) =>
+                            updateFormItem(index, "quantity", e.target.value)
+                          }
                           className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
                           placeholder="Enter quantity..."
                           min="0"
@@ -654,7 +768,9 @@ const handleChange = (e) => {
                         <input
                           type="number"
                           value={item.unitPrice}
-                          onChange={(e) => updateFormItem(index, "unitPrice", e.target.value)}
+                          onChange={(e) =>
+                            updateFormItem(index, "unitPrice", e.target.value)
+                          }
                           className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
                           placeholder="0.00"
                           min="0"
@@ -670,8 +786,8 @@ const handleChange = (e) => {
             {/* Modal Footer */}
             <div className="bg-gradient-to-r from-amber-100 to-orange-100 px-8 py-3 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-amber-200">
               <div className="text-sm text-amber-700">
-                <span className="font-semibold">{formItems.length}</span> item{formItems.length !== 1 ? "s" : ""} ready
-                to save
+                <span className="font-semibold">{formItems.length}</span> item
+                {formItems.length !== 1 ? "s" : ""} ready to save
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
@@ -694,7 +810,7 @@ const handleChange = (e) => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default Inventory
+export default Inventory;
