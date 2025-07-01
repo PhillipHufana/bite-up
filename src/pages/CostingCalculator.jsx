@@ -271,8 +271,4 @@ const CostingCalculator = () => {
   )
 }
 
-<<<<<<< HEAD
 export default CostingCalculator
-=======
-export default CostingCalculator
->>>>>>> dd4c4f2b7420996c4afe402ec00772583d8621da

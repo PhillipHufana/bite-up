@@ -14,6 +14,14 @@ function SalesRecord() {
   });
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedWeek, setSelectedWeek] = useState(getCurrentWeekOfMonth());
+
+  function getCurrentWeekOfMonth(date = new Date()) {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const dayOfWeek = start.getDay() || 7;
+    const adjustedDate = date.getDate() + dayOfWeek - 1;
+    return Math.ceil(adjustedDate / 7);
+  }
 
   const monthNames = [
     "January",
@@ -42,7 +50,7 @@ function SalesRecord() {
     return () => {
       document.head.removeChild(script);
     };
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, selectedWeek]);
 
   const fetchData = async () => {
     try {
@@ -69,10 +77,11 @@ function SalesRecord() {
 
       setSalesData([
         {
-          label: "Weekly Sales",
+          label: `Week ${selectedWeek} Sales`,
           value: `P ${weeklySales.toFixed(2)}`,
           color: "text-blue-600",
         },
+
         {
           label: `${monthNames[selectedMonth - 1]} Monthly Sales`,
           value: `P ${monthlySales.toFixed(2)}`,
@@ -86,13 +95,9 @@ function SalesRecord() {
       ]);
 
       setChartData({
-        labels: weeklyRes.data.map((row) => `Week ${row.week}`),
-        revenue: new Array(weeklyRes.data.length).fill(
-          profitRes.data.total_revenue / weeklyRes.data.length
-        ),
-        profit: new Array(weeklyRes.data.length).fill(
-          profitRes.data.total_profit / weeklyRes.data.length
-        ),
+        labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+        revenue: Array(4).fill(profitRes.data.total_revenue / 4),
+        profit: Array(4).fill(profitRes.data.total_profit / 4),
       });
 
       setTopSellingItems(
@@ -122,7 +127,12 @@ function SalesRecord() {
     if (!window.Chart || !lineChartRef.current) return;
 
     const ctx = lineChartRef.current.getContext("2d");
-    new window.Chart(ctx, {
+
+    if (window.salesChart) {
+      window.salesChart.destroy();
+    }
+
+    window.salesChart = new window.Chart(ctx, {
       type: "line",
       data: {
         labels: chartData.labels,
@@ -154,22 +164,14 @@ function SalesRecord() {
           legend: {
             position: "top",
             labels: {
-              font: {
-                family: "Poppins, sans-serif",
-                size: 14,
-                weight: "bold",
-              },
+              font: { family: "Poppins, sans-serif", size: 14, weight: "bold" },
               color: "#222222",
             },
           },
           title: {
             display: true,
-            text: "Weekly Sales Performance and Trends",
-            font: {
-              family: "Poppins, sans-serif",
-              size: 16,
-              weight: "bold",
-            },
+            text: "Monthly Sales Performance and Trends",
+            font: { family: "Poppins, sans-serif", size: 16, weight: "bold" },
             color: "#222222",
           },
         },
@@ -179,18 +181,14 @@ function SalesRecord() {
             grid: { color: "rgba(63, 51, 31, 0.2)" },
             ticks: {
               color: "#222222",
-              font: {
-                family: "Poppins, sans-serif",
-              },
+              font: { family: "Poppins, sans-serif" },
             },
           },
           x: {
             grid: { color: "rgba(63, 51, 31, 0.2)" },
             ticks: {
               color: "#222222",
-              font: {
-                family: "Poppins, sans-serif",
-              },
+              font: { family: "Poppins, sans-serif" },
             },
           },
         },
@@ -207,7 +205,7 @@ function SalesRecord() {
         Sales Record
       </h2>
 
-      <div className="flex gap-4 items-center">
+      <div className="flex gap-4 items-center flex-wrap">
         <label className="text-sm text-[#444]">Select Month:</label>
         <select
           value={selectedMonth}
@@ -217,6 +215,19 @@ function SalesRecord() {
           {monthNames.map((name, index) => (
             <option key={index} value={index + 1}>
               {name}
+            </option>
+          ))}
+        </select>
+
+        <label className="text-sm text-[#444]">Select Week:</label>
+        <select
+          value={selectedWeek}
+          onChange={(e) => setSelectedWeek(parseInt(e.target.value))}
+          className="border rounded px-2 py-1"
+        >
+          {[1, 2, 3, 4].map((week) => (
+            <option key={week} value={week}>
+              Week {week}
             </option>
           ))}
         </select>

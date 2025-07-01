@@ -3,19 +3,18 @@ import db from "../db.js";
 
 const router = express.Router();
 
-// GET current week sales
 router.get("/weekly", async (req, res) => {
   try {
     const [results] = await db.query(`
       SELECT 
         SUM(o.total_amount) AS total_sales,
-        WEEK(oh.date) AS week
+        WEEK(oh.date, 1) AS week
       FROM orderhistory oh
       JOIN orders o ON oh.order_id = o.order_id
       WHERE oh.status = 'Completed'
-        AND WEEK(oh.date) = WEEK(CURDATE())
+        AND WEEK(oh.date, 1) = WEEK(CURDATE(), 1)
         AND YEAR(oh.date) = YEAR(CURDATE())
-      GROUP BY WEEK(oh.date)
+      GROUP BY WEEK(oh.date, 1)
     `);
     res.json(results);
   } catch (err) {
@@ -24,7 +23,6 @@ router.get("/weekly", async (req, res) => {
   }
 });
 
-// GET current month sales
 router.get("/monthly", async (req, res) => {
   try {
     const [results] = await db.query(`
@@ -45,7 +43,6 @@ router.get("/monthly", async (req, res) => {
   }
 });
 
-// GET current year sales
 router.get("/yearly", async (req, res) => {
   try {
     const [results] = await db.query(`
@@ -65,7 +62,6 @@ router.get("/yearly", async (req, res) => {
   }
 });
 
-// GET total profit and revenue
 router.get("/profit", async (req, res) => {
   try {
     const [results] = await db.query(`
@@ -81,7 +77,6 @@ router.get("/profit", async (req, res) => {
   }
 });
 
-// GET top 3 selling items (all time)
 router.get("/top-items", async (req, res) => {
   try {
     const [results] = await db.query(`
