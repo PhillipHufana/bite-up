@@ -9,7 +9,7 @@ router.get("/", async (req, res) => {
     const [results] = await db.query(`
       SELECT 
         ingredient_id, name, category, brand, unit, price, 
-        quantity, ml_to_gram_conversion, cost_per_gram, purchase_date 
+        quantity, cost_per_gram, purchase_date 
       FROM ingredient
     `);
     res.json(results);
@@ -53,7 +53,6 @@ router.post("/bulk", async (req, res) => {
         unit,
         price,
         quantity,
-        ml_to_gram_conversion,
         cost_per_gram,
         purchase_date,
       } = item;
@@ -99,12 +98,11 @@ router.post("/bulk", async (req, res) => {
 
         await db.query(
           `UPDATE ingredient 
-           SET price = ?, quantity = ?, ml_to_gram_conversion = ?, cost_per_gram = ?, purchase_date = ?, unit = ?
+           SET price = ?, quantity = ?, cost_per_gram = ?, purchase_date = ?, unit = ?
            WHERE ingredient_id = ?`,
           [
             updatedPrice,
             updatedQuantity,
-            parseFloat(ml_to_gram_conversion) || 0,
             parseFloat(cost_per_gram) || 0,
             purchase_date || new Date().toISOString().split("T")[0],
             normalizedUnit,
@@ -117,7 +115,7 @@ router.post("/bulk", async (req, res) => {
         const newId = await generateNextId();
         await db.query(
           `INSERT INTO ingredient 
-           (ingredient_id, name, category, brand, unit, price, quantity, ml_to_gram_conversion, cost_per_gram, purchase_date)
+           (ingredient_id, name, category, brand, unit, price, quantity, cost_per_gram, purchase_date)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             newId,
@@ -127,7 +125,6 @@ router.post("/bulk", async (req, res) => {
             normalizedUnit,
             parseFloat(price),
             convertedQty,
-            parseFloat(ml_to_gram_conversion) || 0,
             parseFloat(cost_per_gram) || 0,
             purchase_date || new Date().toISOString().split("T")[0],
           ]
@@ -152,7 +149,6 @@ router.put("/:id", async (req, res) => {
     unit,
     price,
     quantity,
-    ml_to_gram_conversion,
     cost_per_gram,
     purchase_date,
   } = req.body;
@@ -160,8 +156,7 @@ router.put("/:id", async (req, res) => {
   try {
     await db.query(
       `UPDATE ingredient 
-       SET name = ?, brand = ?, unit = ?, price = ?, quantity = ?, 
-           ml_to_gram_conversion = ?, cost_per_gram = ?, purchase_date = ?
+       SET name = ?, brand = ?, unit = ?, price = ?, quantity = ?, cost_per_gram = ?, purchase_date = ?
        WHERE ingredient_id = ?`,
       [
         name,
@@ -169,7 +164,6 @@ router.put("/:id", async (req, res) => {
         unit,
         parseFloat(price),
         parseFloat(quantity),
-        parseFloat(ml_to_gram_conversion),
         parseFloat(cost_per_gram),
         purchase_date,
         id,

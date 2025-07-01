@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
       okb.order_date AS delivery_date,
       okb.total_amount AS total,
       'Completed' AS status
-    FROM orderkb okb
+    FROM orders okb
     JOIN customer c USING (customer_id)
     JOIN orderitem oi USING (order_id)
     JOIN product p USING (product_id)

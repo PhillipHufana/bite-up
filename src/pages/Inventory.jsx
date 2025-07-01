@@ -372,9 +372,6 @@ const Inventory = () => {
                                 Qty
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
-                                ML→G
-                              </th>
-                              <th className="px-4 py-3 text-left font-semibold">
                                 Cost/g
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
@@ -461,20 +458,6 @@ const Inventory = () => {
                                       />
                                     ) : (
                                       item.quantity
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    {isEditing ? (
-                                      <input
-                                        name="ml_to_gram_conversion"
-                                        value={editData.ml_to_gram_conversion}
-                                        onChange={handleChange}
-                                        type="number"
-                                        step="0.00001"
-                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
-                                      />
-                                    ) : (
-                                      item.ml_to_gram_conversion
                                     )}
                                   </td>
                                   <td className="px-4 py-3">

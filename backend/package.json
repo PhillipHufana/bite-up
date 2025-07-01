@@ -17,5 +17,7 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.0"
-  }
+  },
+  "keywords": [],
+  "author": ""
 }
