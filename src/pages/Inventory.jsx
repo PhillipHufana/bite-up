@@ -142,18 +142,21 @@ const Inventory = () => {
   };
 
   useEffect(() => {
-    const fetchIngredients = async () => {
-      try {
-        const res = await axios.get("/api/ingredients");
-        setIngredients(res.data);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchIngredients();
-  }, []);
+  fetchIngredients();
+}, []);
+
+
+  const fetchIngredients = async () => {
+  try {
+    const res = await axios.get("/api/ingredients");
+    setIngredients(res.data);
+  } catch (err) {
+    console.error("Error fetching data:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const groupByCategory = (items) => {
     return items.reduce((acc, item) => {
@@ -181,20 +184,28 @@ const Inventory = () => {
   };
 
   const handleSave = async (id) => {
-    try {
-      await axios.put(`/api/ingredients/${id}`, editData);
+  try {
+    await axios.put(`/api/ingredients/${id}`, {
+      name: editData.name,
+      brand: editData.brand,
+      unit: editData.unit,
+      price: parseFloat(editData.price),
+      quantity: parseFloat(editData.quantity),
+      cost_per_gram: parseFloat(editData.cost_per_gram),
+      purchase_date: new Date().toISOString().split("T")[0], // assuming you want to update the date
+    });
 
-      // Automatically delete if quantity becomes 0
-      if (parseFloat(editData.quantity) === 0) {
-        await axios.delete(`/api/ingredients/${id}`);
-      }
-
-      setEditRowId(null);
-      fetchIngredients();
-    } catch (err) {
-      console.error("Update or delete failed:", err);
+    if (parseFloat(editData.quantity) === 0) {
+      await axios.delete(`/api/ingredients/${id}`);
     }
-  };
+
+    setEditRowId(null);
+    await fetchIngredients();
+  } catch (err) {
+    console.error("Update or delete failed:", err.response?.data || err.message);
+  }
+};
+
 
   const handleDelete = async (id) => {
     if (!id || typeof id !== "string") {
@@ -249,37 +260,39 @@ const Inventory = () => {
   };
 
   const handleModalSave = async () => {
-    try {
-      if (!formItems || formItems.length === 0) return;
+  try {
+    if (!formItems || formItems.length === 0) return;
 
-      const response = await axios.post("/api/ingredients/bulk", {
-        items: formItems.map((item) => ({
-          category: item.category,
-          name: item.itemName,
-          brand: item.brand,
-          unit: item.unit,
-          quantity: Number.parseFloat(item.quantity),
-          price: Number.parseFloat(item.unitPrice),
-          purchase_date: new Date().toISOString().split("T")[0],
-        })),
-      });
+    const response = await axios.post("/api/ingredients/bulk", {
+      items: formItems.map((item) => ({
+        category: item.category,
+        name: item.itemName,
+        brand: item.brand,
+        unit: item.unit,
+        quantity: Number.parseFloat(item.quantity),
+        price: Number.parseFloat(item.unitPrice),
+        cost_per_gram: 0, // Default to 0 if not computed yet
+        purchase_date: new Date().toISOString().split("T")[0],
+      })),
+    });
 
-      setShowModal(false);
-      setFormItems([
-        {
-          category: "",
-          itemName: "",
-          brand: "",
-          unit: "",
-          unitPrice: "",
-          quantity: "",
-        },
-      ]);
-      fetchIngredients();
-    } catch (err) {
-      console.error("Error saving multiple items:", err);
-    }
-  };
+    setShowModal(false);
+    setFormItems([
+      {
+        category: "",
+        itemName: "",
+        brand: "",
+        unit: "",
+        unitPrice: "",
+        quantity: "",
+      },
+    ]);
+    await fetchIngredients(); // Use await to ensure update
+  } catch (err) {
+    console.error("Error saving multiple items:", err.response?.data || err.message);
+  }
+};
+
 
   const groupedData = groupByCategory(ingredients);
 
@@ -702,11 +715,11 @@ const Inventory = () => {
                         <Select
                           placeholder="Select unit..."
                           options={[
-                            { label: "Grams (g)", value: "grams" },
+                            { label: "Grams (g)", value: "g" },
                             { label: "Kilograms (kg)", value: "kg" },
                             { label: "Milliliters (ml)", value: "ml" },
                             { label: "Liters (l)", value: "l" },
-                            { label: "Pieces (pc)", value: "piece" },
+                            { label: "Pieces (pc)", value: "pc" },
                           ]}
                           value={
                             item.unit

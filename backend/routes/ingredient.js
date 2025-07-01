@@ -64,25 +64,35 @@ router.post("/bulk", async (req, res) => {
       let normalizedUnit = unit.toLowerCase();
 
       switch (normalizedUnit) {
-        case "kg":
-          convertedQty *= 1000;
-          normalizedUnit = "g";
-          break;
-        case "l":
-          convertedQty *= 1000;
-          normalizedUnit = "ml";
-          break;
-        case "gr":
-          normalizedUnit = "g";
-          break;
-        case "ml":
-        case "g":
-        case "pc":
-          break;
-        default:
-          console.warn(`Unsupported unit: ${unit}`);
-          continue;
-      }
+      case "grams":
+      case "gr":
+      case "g":
+        normalizedUnit = "g";
+        break;
+      case "kilograms":
+      case "kg":
+        convertedQty *= 1000;
+        normalizedUnit = "g";
+        break;
+      case "milliliters":
+      case "ml":
+        normalizedUnit = "ml";
+        break;
+      case "liters":
+      case "l":
+        convertedQty *= 1000;
+        normalizedUnit = "ml";
+        break;
+      case "pieces":
+      case "piece":
+      case "pc":
+        normalizedUnit = "pc";
+        break;
+      default:
+        console.warn(`Unsupported unit: ${unit}`);
+        continue; // this skips the item!
+    }
+
 
       const [existingRows] = await db.query(
         "SELECT * FROM ingredient WHERE category = ? AND name = ?",
