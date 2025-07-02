@@ -14,8 +14,11 @@ const Inventory = () => {
   const [editData, setEditData] = useState({});
   const [expandedCategories, setExpandedCategories] = useState({});
   const [showModal, setShowModal] = useState(false);
-  const [highlightedRowId, setHighlightedRowId] = useState({});
   const [deletingId, setDeletingId] = useState(null);
+  const [highlightedRowId, setHighlightedRowId] = useState([]);
+  const [boldRowId, setBoldRowId] = useState([]);
+
+
 
   //Form state for modal
   const [formItems, setFormItems] = useState([
@@ -158,6 +161,16 @@ const Inventory = () => {
   }
 };
 
+useEffect(() => {
+  if (highlightedRowId.length > 0) {
+    const timeout = setTimeout(() => {
+      setHighlightedRowId([]); //This removes yellow highlight
+    });
+
+    return () => clearTimeout(timeout);
+  }
+}, [highlightedRowId]);
+
 
   const groupByCategory = (items) => {
     return items.reduce((acc, item) => {
@@ -192,7 +205,7 @@ const Inventory = () => {
       unit: editData.unit,
       price: parseFloat(editData.price),
       quantity: parseFloat(editData.quantity),
-      cost_per_gram: parseFloat(editData.cost_per_gram),
+      cost_per_unit: parseFloat(editData.cost_per_unit),
       purchase_date: editData.purchaseDate
     });
 
@@ -283,11 +296,15 @@ const formatDate = (isoString) => {
         unit: item.unit,
         quantity: Number.parseFloat(item.quantity),
         price: Number.parseFloat(item.unitPrice),
-        cost_per_gram: 0, // Default to 0 if not computed yet
+        cost_per_unit: 0,
         purchase_date: item.purchaseDate,
-
       })),
     });
+
+    const { newlyInserted, completelyNewIds } = response.data;
+
+    setBoldRowId((prev) => [...prev, ...newlyInserted]); // permanent
+    setHighlightedRowId(completelyNewIds); // temporary
 
     setShowModal(false);
     setFormItems([
@@ -301,7 +318,9 @@ const formatDate = (isoString) => {
         purchaseDate: "",
       },
     ]);
-    await fetchIngredients(); // Use await to ensure update
+
+    await fetchIngredients(); // Refresh the inventory list
+
   } catch (err) {
     console.error("Error saving multiple items:", err.response?.data || err.message);
   }
@@ -390,16 +409,16 @@ const formatDate = (isoString) => {
                                 Brand
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
+                                Qty
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
                                 Unit
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
                                 Price
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
-                                Qty
-                              </th>
-                              <th className="px-4 py-3 text-left font-semibold">
-                                Cost/g
+                                Cost/unit
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
                                 Purchase Date
@@ -416,14 +435,10 @@ const formatDate = (isoString) => {
                               return (
                                 <tr
                                   key={item.ingredient_id}
-                                  className={
-                                    Array.isArray(highlightedRowId) &&
-                                    highlightedRowId.includes(
-                                      item.ingredient_id
-                                    )
-                                      ? "bg-yellow-200 transition-colors duration-300"
-                                      : ""
-                                  }
+                                  className={`transition-colors duration-300
+                                    ${boldRowId.includes(item.ingredient_id) ? "font-bold" : ""}
+                                    ${highlightedRowId.includes(item.ingredient_id) ? "bg-yellow-200" : ""}
+                                  `}
                                 >
                                   <td className="px-4 py-3">
                                     {isEditing ? (
@@ -447,6 +462,19 @@ const formatDate = (isoString) => {
                                       />
                                     ) : (
                                       item.brand
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="quantity"
+                                        value={editData.quantity}
+                                        onChange={handleChange}
+                                        type="number"
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      item.quantity
                                     )}
                                   </td>
                                   <td className="px-4 py-3">
@@ -477,34 +505,21 @@ const formatDate = (isoString) => {
                                   <td className="px-4 py-3">
                                     {isEditing ? (
                                       <input
-                                        name="quantity"
-                                        value={editData.quantity}
-                                        onChange={handleChange}
-                                        type="number"
-                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
-                                      />
-                                    ) : (
-                                      item.quantity
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    {isEditing ? (
-                                      <input
-                                        name="cost_per_gram"
-                                        value={editData.cost_per_gram}
+                                        name="cost_per_unit"
+                                        value={editData.cost_per_unit}
                                         onChange={handleChange}
                                         type="number"
                                         step="0.00001"
                                         className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
                                       />
                                     ) : (
-                                      item.cost_per_gram
+                                      item.cost_per_unit
                                     )}
                                   </td>
                                   {/* <td className="px-4 py-3">
                                     {isEditing ? (
                                       <input
-                                        name="cost_per_gram"
+                                        name="cost_per_unit"
                                         value={editData.purc}
                                         onChange={handleChange}
                                         type="number"
@@ -512,7 +527,7 @@ const formatDate = (isoString) => {
                                         className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
                                       />
                                     ) : (
-                                      item.cost_per_gram
+                                      item.cost_per_unit
                                     )}
                                   </td> */}
                                   <td className="px-4 py-3">

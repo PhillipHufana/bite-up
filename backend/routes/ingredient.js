@@ -9,7 +9,7 @@ router.get("/", async (req, res) => {
     const [results] = await db.query(`
       SELECT 
         ingredient_id, name, category, brand, unit, price, 
-        quantity, cost_per_gram, purchase_date 
+        quantity, cost_per_unit, purchase_date 
       FROM ingredient
     `);
     res.json(results);
@@ -27,6 +27,8 @@ router.post("/bulk", async (req, res) => {
   }
 
   const updatedIds = [];
+  const newlyInserted = [];       // Same name/category but new date → BOLD
+  const completelyNewIds = [];    // New name/category → highlight only
 
   const generateNextId = async () => {
     const prefix = "ING-2025-";
@@ -41,7 +43,7 @@ router.post("/bulk", async (req, res) => {
       }
     }
 
-    return `${prefix}${String(nextNumber).padStart(2, "0")}`;
+    return `${prefix}${String(nextNumber).padStart(3, "0")}`;
   };
 
   try {
@@ -53,11 +55,11 @@ router.post("/bulk", async (req, res) => {
         unit,
         price,
         quantity,
-        cost_per_gram,
+        cost_per_unit,
         purchase_date,
       } = item;
 
-      if (!name || !category || price == null || quantity == null) continue;
+      if (!name || !category || price == null || quantity == null || !purchase_date) continue;
 
       let convertedQty = parseFloat(quantity);
       let normalizedUnit = unit.toLowerCase();
@@ -66,12 +68,12 @@ router.post("/bulk", async (req, res) => {
         case "grams":
         case "gr":
         case "g":
-          normalizedUnit = "g";
+          normalizedUnit = "gr";
           break;
         case "kilograms":
         case "kg":
           convertedQty *= 1000;
-          normalizedUnit = "g";
+          normalizedUnit = "gr";
           break;
         case "milliliters":
         case "ml":
@@ -92,13 +94,14 @@ router.post("/bulk", async (req, res) => {
           continue;
       }
 
+      // Check for same name + category + purchase_date
       const [existingRows] = await db.query(
-        "SELECT * FROM ingredient WHERE category = ? AND name = ?",
-        [category, name]
+        `SELECT * FROM ingredient WHERE category = ? AND name = ? AND purchase_date = ?`,
+        [category, name, purchase_date]
       );
 
       if (existingRows.length > 0) {
-        // ✅ Use UPDATE here!
+        // Update existing record (same date)
         const existing = existingRows[0];
         const incomingPrice = parseFloat(price);
         const currentPrice = parseFloat(existing.price);
@@ -107,24 +110,25 @@ router.post("/bulk", async (req, res) => {
 
         await db.query(
           `UPDATE ingredient 
-           SET price = ?, quantity = ?, cost_per_gram = ?, purchase_date = ?, unit = ?
+           SET price = ?, quantity = ?, cost_per_unit = ?, unit = ?, brand = ?
            WHERE ingredient_id = ?`,
           [
             updatedPrice,
             updatedQuantity,
-            parseFloat(cost_per_gram) || 0,
-            purchase_date,
+            parseFloat(cost_per_unit) || 0,
             normalizedUnit,
+            brand,
             existing.ingredient_id,
           ]
         );
 
         updatedIds.push(existing.ingredient_id);
       } else {
+        // New purchase date — insert new row
         const newId = await generateNextId();
         await db.query(
           `INSERT INTO ingredient 
-           (ingredient_id, name, category, brand, unit, price, quantity, cost_per_gram, purchase_date)
+           (ingredient_id, name, category, brand, unit, price, quantity, cost_per_unit, purchase_date)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             newId,
@@ -134,15 +138,34 @@ router.post("/bulk", async (req, res) => {
             normalizedUnit,
             parseFloat(price),
             convertedQty,
-            parseFloat(cost_per_gram) || 0,
+            parseFloat(cost_per_unit) || 0,
             purchase_date
           ]
         );
         updatedIds.push(newId);
+
+        // Determine if this name/category already exists with other dates
+        const [checkOtherRows] = await db.query(
+          `SELECT * FROM ingredient WHERE category = ? AND name = ?`,
+          [category, name]
+        );
+
+        if (checkOtherRows.length > 1) {
+          // This means it already exists but with different date(s)
+          newlyInserted.push(newId); // should be bold
+        } else {
+          // First time this name/category was ever seen
+          completelyNewIds.push(newId); // just highlight
+        }
       }
     }
 
-    res.status(200).json({ success: true, updatedIds });
+    res.status(200).json({
+      success: true,
+      updatedIds,
+      newlyInserted,      // BOLD
+      completelyNewIds,   // YELLOW BG ONLY
+    });
   } catch (err) {
     console.error("Error processing bulk insert:", err.message);
     res.status(500).json({ error: err.message });
@@ -159,14 +182,14 @@ router.put("/:id", async (req, res) => {
     unit,
     price,
     quantity,
-    cost_per_gram,
+    cost_per_unit,
     purchase_date,
   } = req.body;
 
   try {
     await db.query(
       `UPDATE ingredient 
-       SET name = ?, brand = ?, unit = ?, price = ?, quantity = ?, cost_per_gram = ?, purchase_date = ?
+       SET name = ?, brand = ?, unit = ?, price = ?, quantity = ?, cost_per_unit = ?, purchase_date = ?
        WHERE ingredient_id = ?`,
       [
         name,
@@ -174,7 +197,7 @@ router.put("/:id", async (req, res) => {
         unit,
         parseFloat(price),
         parseFloat(quantity),
-        parseFloat(cost_per_gram),
+        parseFloat(cost_per_unit),
         purchase_date,
         id,
       ]
