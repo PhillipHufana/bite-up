@@ -9,7 +9,7 @@ router.get("/", async (req, res) => {
     SELECT 
       p.product_id AS id,
       p.name,
-      SUM(pi.quantity_used * i.cost_per_gram) AS totalCostIngredients
+      SUM(pi.quantity_used * i.cost_per_unit) AS totalCostIngredients
     FROM product p
     JOIN productingredient pi ON p.product_id = pi.product_id
     JOIN ingredient i ON pi.ingredient_id = i.ingredient_id
@@ -54,7 +54,7 @@ router.get("/:id", async (req, res) => {
       i.unit, 
       pi.quantity_used AS quantity, 
       i.quantity AS grams,
-      i.cost_per_gram AS cost
+      i.cost_per_unit AS cost
     FROM productingredient pi
     JOIN ingredient i ON pi.ingredient_id = i.ingredient_id
     WHERE pi.product_id = ?`;

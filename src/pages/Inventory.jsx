@@ -153,13 +153,28 @@ const Inventory = () => {
   const fetchIngredients = async () => {
   try {
     const res = await axios.get("/api/ingredients");
-    setIngredients(res.data);
+    const sorted = sortIngredients(res.data);
+    setIngredients(sorted);
   } catch (err) {
     console.error("Error fetching data:", err);
   } finally {
     setLoading(false);
   }
 };
+//sorting the ingredients alphabetically and based on date in ascending order
+const sortIngredients = (items) =>
+  [...items].sort((a, b) => {
+    // 1. Category A → Z
+    const cat = a.category.localeCompare(b.category);
+    if (cat !== 0) return cat;
+
+    // 2. Name A → Z
+    const name = a.name.localeCompare(b.name);
+    if (name !== 0) return name;
+
+    // 3. Purchase Date oldest → newest (FIFO)
+    return new Date(a.purchase_date) - new Date(b.purchase_date);
+  });
 
 useEffect(() => {
   if (highlightedRowId.length > 0) {
