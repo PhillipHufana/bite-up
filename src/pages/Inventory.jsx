@@ -17,6 +17,11 @@ const Inventory = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [highlightedRowId, setHighlightedRowId] = useState([]);
   const [boldRowId, setBoldRowId] = useState([]);
+  const [supplierName, setSupplierName] = useState("");
+  const [sharedPurchaseDate, setSharedPurchaseDate] = useState(() => {
+    const today = new Date().toISOString().split("T")[0];
+    return today;
+  });
 
 
 
@@ -299,11 +304,13 @@ const formatDate = (isoString) => {
   }
 };
 
-  const handleModalSave = async () => {
+ const handleModalSave = async () => {
   try {
     if (!formItems || formItems.length === 0) return;
 
     const response = await axios.post("/api/ingredients/bulk", {
+      supplier_name: supplierName || "Unknown Supplier",
+      purchase_date: sharedPurchaseDate, // ✅ shared date
       items: formItems.map((item) => ({
         category: item.category,
         name: item.itemName,
@@ -312,16 +319,17 @@ const formatDate = (isoString) => {
         quantity: Number.parseFloat(item.quantity),
         price: Number.parseFloat(item.unitPrice),
         cost_per_unit: 0,
-        purchase_date: item.purchaseDate,
       })),
     });
 
     const { newlyInserted, completelyNewIds } = response.data;
 
-    setBoldRowId((prev) => [...prev, ...newlyInserted]); // permanent
-    setHighlightedRowId(completelyNewIds); // temporary
+    setBoldRowId((prev) => [...prev, ...newlyInserted]);
+    setHighlightedRowId(completelyNewIds);
 
     setShowModal(false);
+    setSupplierName("");
+    setSharedPurchaseDate(""); // ✅ reset shared date
     setFormItems([
       {
         category: "",
@@ -330,16 +338,15 @@ const formatDate = (isoString) => {
         unit: "",
         unitPrice: "",
         quantity: "",
-        purchaseDate: "",
       },
     ]);
 
-    await fetchIngredients(); // Refresh the inventory list
-
+    await fetchIngredients();
   } catch (err) {
     console.error("Error saving multiple items:", err.response?.data || err.message);
   }
 };
+
 
 
   const groupedData = groupByCategory(ingredients);
@@ -629,6 +636,34 @@ const formatDate = (isoString) => {
             {/* Modal Content */}
             <div className="p-8 max-h-[calc(95vh-200px)] overflow-y-auto overflow-x-hidden">
               <div className="space-y-8">
+                {/* Supplier Name */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-amber-800 mb-2">
+                    Supplier Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={supplierName}
+                    onChange={(e) => setSupplierName(e.target.value)}
+                    placeholder="Enter supplier name..."
+                    className="w-full border border-amber-200 rounded-xl px-4 py-2 text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    required
+                  />
+                </div>
+                {/* Purchase Date (Shared) */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-amber-800 mb-2">
+                    Purchase Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full border border-amber-200 rounded-xl px-4 py-2 text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    value={sharedPurchaseDate}
+                    onChange={(e) => setSharedPurchaseDate(e.target.value)}
+                    required
+                  />
+                </div>
+
                 {formItems.map((item, index) => (
                   <div
                     key={index}
@@ -832,7 +867,7 @@ const formatDate = (isoString) => {
                         />
                       </div>
                       {/* Purchase Date */}
-                      <div className="space-y-2">
+                      {/* <div className="space-y-2">
                         <label className="block text-sm font-semibold text-amber-800 mb-2">
                           Purchase Date <span className="text-red-500">*</span>
                         </label>
@@ -844,7 +879,7 @@ const formatDate = (isoString) => {
                           }
                           className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
                         />
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 ))}
