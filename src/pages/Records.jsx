@@ -10,7 +10,7 @@ function RecordsPage() {
   const [activeTab, setActiveTab] = useState("inventory");
 
   const tabs = [
-    { id: "inventory", label: "Procurement Records" },
+    { id: "inventory", label: "Procurement Record" },
     { id: "customer", label: "Customer Profile" },
     { id: "sales", label: "Sales Record" },
   ];
@@ -66,7 +66,7 @@ function RecordsPage() {
           ))}
         </div>
 
-        <div className="bg-white border-2 border-amber-900 rounded-2xl shadow-md p-6">
+        <div className="bg-[#fff6e3] border-2 border-[#d08700] rounded-2xl shadow-md p-6">
           {renderContent()}
         </div>
       </main>

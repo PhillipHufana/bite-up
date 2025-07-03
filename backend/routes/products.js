@@ -7,7 +7,7 @@ const router = express.Router();
 // GET /api/products
 router.get("/", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT name, unit_cost FROM product");
+    const [rows] = await db.query("SELECT name, cost FROM product");
     res.json(rows);
   } catch (err) {
     console.error("Product fetch failed:", err);

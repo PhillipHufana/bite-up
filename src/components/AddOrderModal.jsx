@@ -98,7 +98,7 @@ function AddOrderModal({ isOpen, onClose, onAddOrder, customers }) {
             const match = products.find(
               (p) => p.name.toLowerCase() === value.toLowerCase()
             );
-            if (match) updated.price = match.unit_cost;
+            if (match) updated.price = match.cost;
           }
           return updated;
         }

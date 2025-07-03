@@ -74,7 +74,7 @@ function CustomerProfile() {
     <div className="space-y-6">
       <h2
         className="text-3xl font-marcellus mb-12 mt-3"
-        style={{ color: "#444444" }}
+        style={{ color: "#702d05" }}
       >
         Customer Profile
       </h2>
@@ -84,12 +84,11 @@ function CustomerProfile() {
           placeholder="Search customers by name"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md bg-[rgba(68,68,68,0.15)] text-[#444444] border-none rounded-lg"
+          className="max-w-md bg-amber-100 border border-amber-300 text-black rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-amber-400 shadow-sm"
         />
         <Button
           onClick={() => setIsModalOpen(true)}
-          className="text-white px-6 py-2 rounded-full font-poppins transition-all duration-300"
-          style={{ backgroundColor: "#C1801C" }}
+          className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center cursor-pointer space-x-2"
         >
           ADD NEW +
         </Button>
@@ -100,39 +99,33 @@ function CustomerProfile() {
           <AccordionItem
             key={customer.id}
             value={customer.id}
-            className="bg-[rgba(68,68,68,0.09)] rounded-xl"
+            className="bg-gradient-to-br from-amber-200 to-orange-200 rounded-xl shadow-lg"
           >
             <AccordionTrigger className="px-6 py-4 hover:no-underline">
               <div className="flex justify-between items-center w-full">
                 <div className="flex items-center space-x-4">
                   <Avatar>
                     <AvatarFallback
-                      style={{ backgroundColor: "#42392C", color: "#FFF1C0" }}
+                      style={{ backgroundColor: "#7b3306", color: "#fff" }}
                     >
                       {customer.name.split(" ")[0][0]}
                       {customer.name.split(" ")[1]?.[0] || ""}
                     </AvatarFallback>
                   </Avatar>
                   <div className="text-left">
-                    <div
-                      className="font-poppins font-semibold"
-                      style={{ color: "#222222" }}
-                    >
+                    <div className="font-poppins font-semibold text-amber-900">
                       {customer.name}
                     </div>
-                    <div className="text-sm font-poppins text-gray-600">
+                    <div className="text-sm font-poppins text-[#222]">
                       {customer.phone} {customer.email}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div
-                    className="font-poppins font-semibold"
-                    style={{ color: "#222222" }}
-                  >
+                  <div className="font-poppins font-semibold text-amber-900">
                     {customer.address}
                   </div>
-                  <div className="text-sm font-poppins text-gray-600">
+                  <div className="text-sm font-poppins text-[#222]">
                     Customer Since: {customer.customerSince || "N/A"}
                   </div>
                 </div>
@@ -143,7 +136,7 @@ function CustomerProfile() {
                 <div className="flex space-x-4">
                   <div
                     className="rounded-lg p-4 text-center"
-                    style={{ backgroundColor: "rgba(141, 120, 103, 0.25)" }}
+                    style={{ backgroundColor: "#fef3c6" }}
                   >
                     <div className="text-2xl font-bold text-red-600">
                       {customer.totalOrders}
@@ -154,7 +147,7 @@ function CustomerProfile() {
                   </div>
                   <div
                     className="rounded-lg p-4 text-center"
-                    style={{ backgroundColor: "rgba(141, 120, 103, 0.25)" }}
+                    style={{ backgroundColor: "#fef3c6" }}
                   >
                     <div className="text-2xl font-bold text-green-600">
                       {customer.totalSpent}
@@ -167,7 +160,7 @@ function CustomerProfile() {
 
                 {customer.orderHistory.length > 0 && (
                   <div className="mt-6 space-y-4">
-                    <div className="text-lg font-semibold font-poppins">
+                    <div className="text-lg font-semibold font-poppins text-[#222]">
                       Order History
                     </div>
                     {customer.orderHistory.map((order, index) => (
@@ -210,7 +203,7 @@ function CustomerProfile() {
                         </div>
 
                         <div className="flex justify-between items-center mt-3">
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-red-900 font-bold">
                             {order.status}
                           </div>
                           <div className="text-green-600 font-bold text-xl">

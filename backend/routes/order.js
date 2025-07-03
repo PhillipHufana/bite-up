@@ -7,18 +7,19 @@ const router = express.Router();
 router.get("/", async (req, res) => {
   const query = `
     SELECT 
-      okb.order_item_id AS id,
-      c.customer_id, c.first_name, c.last_name,
-      GROUP_CONCAT(p.name SEPARATOR ', ') AS order_name,
-      okb.order_date AS delivery_date,
-      okb.total_amount AS total,
-      'Completed' AS status
-    FROM orders okb
-    JOIN customer c USING (customer_id)
-    JOIN orderitem oi USING (order_id)
-    JOIN product p USING (product_id)
-    GROUP BY okb.order_item_id, c.customer_id, c.first_name, c.last_name, okb.order_date, okb.total_amount
-    ORDER BY okb.order_date DESC
+  okb.order_item_id AS id,
+  c.customer_id, c.first_name, c.last_name,
+  GROUP_CONCAT(CONCAT(oi.quantity_ordered, 'x ', p.name) SEPARATOR ', ') AS order_name,
+  okb.order_date AS delivery_date,
+  okb.total_amount AS total,
+  'Completed' AS status
+FROM orders okb
+JOIN customer c USING (customer_id)
+JOIN orderitem oi USING (order_id)
+JOIN product p USING (product_id)
+GROUP BY okb.order_item_id, c.customer_id, c.first_name, c.last_name, okb.order_date, okb.total_amount
+ORDER BY okb.order_date DESC
+
   `;
   try {
     const [rows] = await db.query(query);
@@ -29,10 +30,10 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET products 
+// GET products
 router.get("/products", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT name, unit_cost FROM product");
+    const [rows] = await db.query("SELECT name, cost FROM product");
     res.json(rows);
   } catch (err) {
     console.error("Product fetch failed:", err);
