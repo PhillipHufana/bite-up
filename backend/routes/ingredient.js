@@ -18,6 +18,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // POST /api/ingredient/bulk
 router.post("/bulk", async (req, res) => {
   const { items, supplier_name = "Unknown Supplier", purchase_date } = req.body;
@@ -82,7 +83,8 @@ router.post("/bulk", async (req, res) => {
         unit,
         price,
         quantity,
-        cost_per_unit
+        cost_per_unit,
+        to_grams // <-- New
       } = item;
 
       if (!name || !category || price == null || quantity == null) continue;
@@ -90,15 +92,54 @@ router.post("/bulk", async (req, res) => {
       const itemDate = purchase_date;
       let convertedQty = parseFloat(quantity);
       let normalizedUnit = unit.toLowerCase();
+      let toGramsValue = to_grams;
 
       switch (normalizedUnit) {
-        case "grams": case "gr": case "g": normalizedUnit = "gr"; break;
-        case "kilograms": case "kg": convertedQty *= 1000; normalizedUnit = "gr"; break;
-        case "milliliters": case "ml": normalizedUnit = "ml"; break;
-        case "liters": case "l": convertedQty *= 1000; normalizedUnit = "ml"; break;
-        case "pieces": case "piece": case "pc": normalizedUnit = "pc"; break;
-        default: console.warn(`Unsupported unit: ${unit}`); continue;
+        case "grams":
+        case "gr":
+        case "g":
+          normalizedUnit = "gr";
+          toGramsValue = "N/A";
+          break;
+
+        case "kilograms":
+        case "kg":
+          convertedQty *= 1000;
+          normalizedUnit = "gr";
+          toGramsValue = "N/A";
+          break;
+
+        case "liters":
+        case "l":
+          convertedQty *= 1000;
+          toGramsValue = parseFloat(to_grams);
+          if (!isNaN(toGramsValue)) convertedQty *= toGramsValue;
+          normalizedUnit = "gr"; // ✅ force final unit to gr
+          break;
+
+        case "milliliters":
+        case "ml":
+          toGramsValue = parseFloat(to_grams);
+          if (!isNaN(toGramsValue)) convertedQty *= toGramsValue;
+          normalizedUnit = "gr"; // ✅ force final unit to gr
+          break;
+
+        case "pieces":
+        case "piece":
+        case "pc":
+          toGramsValue = parseFloat(to_grams);
+          if (!isNaN(toGramsValue)) convertedQty *= toGramsValue;
+          normalizedUnit = "gr"; // ✅ force final unit to gr
+          break;
+
+        default:
+          console.warn(`Unsupported unit: ${unit}`);
+          continue;
       }
+
+
+      // Insert or update logic here, same as before...
+      // Make sure to save `toGramsValue` into the DB as `to_grams` column
 
       const [existingRows] = await db.query(
         `SELECT * FROM ingredient WHERE category = ? AND name = ? AND purchase_date = ?`,
@@ -115,9 +156,9 @@ router.post("/bulk", async (req, res) => {
 
         await db.query(
           `UPDATE ingredient 
-           SET price = ?, quantity = ?, cost_per_unit = ?, unit = ?, brand = ?
-           WHERE ingredient_id = ?`,
-          [updatedPrice, updatedQuantity, parseFloat(cost_per_unit) || 0, normalizedUnit, brand, existing.ingredient_id]
+          SET price = ?, quantity = ?, cost_per_unit = ?, unit = ?, brand = ?, to_grams = ?
+          WHERE ingredient_id = ?`,
+          [updatedPrice, updatedQuantity, parseFloat(cost_per_unit) || 0, normalizedUnit, brand, toGramsValue, existing.ingredient_id]
         );
 
         ingredientId = existing.ingredient_id;
@@ -126,9 +167,9 @@ router.post("/bulk", async (req, res) => {
         ingredientId = await generateNextId();
         await db.query(
           `INSERT INTO ingredient 
-           (ingredient_id, name, category, brand, unit, price, quantity, cost_per_unit, purchase_date)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [ingredientId, name, category, brand, normalizedUnit, parseFloat(price), convertedQty, parseFloat(cost_per_unit) || 0, itemDate]
+          (ingredient_id, name, category, brand, unit, price, quantity, cost_per_unit, purchase_date, to_grams)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [ingredientId, name, category, brand, normalizedUnit, parseFloat(price), convertedQty, parseFloat(cost_per_unit) || 0, itemDate, toGramsValue]
         );
         updatedIds.push(ingredientId);
 
@@ -140,6 +181,7 @@ router.post("/bulk", async (req, res) => {
       receiptItems.push([ingredientId, convertedQty, parseFloat(price)]);
       totalCost += parseFloat(price) * convertedQty;
     }
+
 
     await db.query(
       `INSERT INTO receipt (receipt_id, receipt_date, supplier_name, total_cost)

@@ -268,10 +268,23 @@ useEffect(() => {
 
   //Modal Form Handlers
   const updateFormItem = (index, field, value) => {
-    const updatedItems = [...formItems];
-    updatedItems[index][field] = value;
-    setFormItems(updatedItems);
+    setFormItems((prevItems) => {
+      const newItems = [...prevItems];
+      newItems[index][field] = value;
+
+      if (field === "unit") {
+        const unit = value.toLowerCase();
+        if (unit === "g" || unit === "kg") {
+          newItems[index]["to_grams"] = "N/A";
+        } else {
+          newItems[index]["to_grams"] = ""; // or retain last input
+        }
+      }
+
+      return newItems;
+    });
   };
+
 
   const removeFormItem = (index) => {
     const updatedItems = [...formItems];
@@ -304,22 +317,30 @@ const formatDate = (isoString) => {
   }
 };
 
- const handleModalSave = async () => {
+  const handleModalSave = async () => {
   try {
     if (!formItems || formItems.length === 0) return;
 
     const response = await axios.post("/api/ingredients/bulk", {
       supplier_name: supplierName || "Unknown Supplier",
-      purchase_date: sharedPurchaseDate, // ✅ shared date
-      items: formItems.map((item) => ({
-        category: item.category,
-        name: item.itemName,
-        brand: item.brand,
-        unit: item.unit,
-        quantity: Number.parseFloat(item.quantity),
-        price: Number.parseFloat(item.unitPrice),
-        cost_per_unit: 0,
-      })),
+      purchase_date: sharedPurchaseDate,
+      items: formItems.map((item) => {
+        let toGrams = item.to_grams;
+        if (item.unit === "g" || item.unit === "kg") {
+          toGrams = "N/A";
+        }
+
+        return {
+          category: item.category,
+          name: item.itemName,
+          brand: item.brand,
+          unit: item.unit,
+          quantity: Number.parseFloat(item.quantity),
+          price: Number.parseFloat(item.unitPrice),
+          cost_per_unit: 0,
+          to_grams: toGrams,
+        };
+      }),
     });
 
     const { newlyInserted, completelyNewIds } = response.data;
@@ -327,9 +348,8 @@ const formatDate = (isoString) => {
     setBoldRowId((prev) => [...prev, ...newlyInserted]);
     setHighlightedRowId(completelyNewIds);
 
-    setShowModal(false);
     setSupplierName("");
-    setSharedPurchaseDate(""); // ✅ reset shared date
+    setSharedPurchaseDate("");
     setFormItems([
       {
         category: "",
@@ -338,16 +358,18 @@ const formatDate = (isoString) => {
         unit: "",
         unitPrice: "",
         quantity: "",
+        to_grams: "",
       },
     ]);
 
     await fetchIngredients();
   } catch (err) {
     console.error("Error saving multiple items:", err.response?.data || err.message);
+  } finally {
+    // ✅ Ensure this always runs
+    setShowModal(false);
   }
 };
-
-
 
   const groupedData = groupByCategory(ingredients);
 
@@ -511,6 +533,7 @@ const formatDate = (isoString) => {
                                       item.unit
                                     )}
                                   </td>
+
                                   <td className="px-4 py-3">
                                     {isEditing ? (
                                       <input
@@ -800,6 +823,25 @@ const formatDate = (isoString) => {
                         />
                       </div>
 
+                      {/* Quantity */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
+                          Quantity <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={item.quantity || ""}
+                          onChange={(e) =>
+                            updateFormItem(index, "quantity", e.target.value)
+                          }
+                          className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
+                          placeholder="Enter quantity..."
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+
+
                       {/* Unit */}
                       <div className="space-y-2">
                         <label className="block text-sm font-semibold text-amber-800 mb-2">
@@ -831,23 +873,27 @@ const formatDate = (isoString) => {
                         />
                       </div>
 
-                      {/* Quantity */}
+                      {/* Grams per ml/pc */}
                       <div className="space-y-2">
                         <label className="block text-sm font-semibold text-amber-800 mb-2">
-                          Quantity <span className="text-red-500">*</span>
+                          Grams per ml/pc
                         </label>
                         <input
-                          type="number"
-                          value={item.quantity || ""}
+                          type="text"
+                          value={item.to_grams === "N/A" ? "N/A" : item.to_grams || ""}
+                          disabled={item.unit === "g" || item.unit === "kg"}
                           onChange={(e) =>
-                            updateFormItem(index, "quantity", e.target.value)
+                            updateFormItem(index, "to_grams", e.target.value)
                           }
-                          className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
-                          placeholder="Enter quantity..."
-                          min="0"
-                          step="0.01"
+                          placeholder={
+                            item.unit === "g" || item.unit === "kg"
+                              ? "N/A"
+                              : "Enter grams per ml or pc"
+                          }
+                          className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
                         />
                       </div>
+
 
                       {/* Unit Price */}
                       <div className="space-y-2">
