@@ -182,7 +182,7 @@ function CustomerProfile() {
                         </div>
 
                         <div className="space-y-1 mb-2">
-                          {order.items.split(", ").map((item, idx) => {
+                          {(order.items || "").split(", ").map((item, idx) => {
                             const match = item.match(
                               /^(\d+)x (.+?) @ ([\d.]+)$/
                             );
