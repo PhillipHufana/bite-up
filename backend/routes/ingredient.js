@@ -8,10 +8,10 @@ router.get("/", async (req, res) => {
   try {
     const [results] = await db.query(`
       SELECT 
-        ingredient_id, name, category, brand, unit, price, 
-        quantity, cost_per_unit, purchase_date,
-        to_grams             
-      FROM ingredient
+      ingredient_id, name, category, brand, unit, price, 
+      quantity, initial_quantity, cost_per_unit, purchase_date,
+      to_grams
+    FROM ingredient
     `);
     res.json(results);
   } catch (err) {
@@ -159,9 +159,9 @@ router.post("/bulk", async (req, res) => {
         ingredientId = await generateNextId();
         await db.query(
           `INSERT INTO ingredient 
-           (ingredient_id, name, category, brand, unit, price, quantity, cost_per_unit, purchase_date, to_grams)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [ingredientId, name, category, brand, normalizedUnit, parsedPrice, finalQuantity, costPerUnit, purchase_date, toGramsValue]
+          (ingredient_id, name, category, brand, unit, price, quantity, initial_quantity, cost_per_unit, purchase_date, to_grams)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [ingredientId, name, category, brand, normalizedUnit, parsedPrice, finalQuantity, finalQuantity, costPerUnit, purchase_date, toGramsValue]
         );
         updatedIds.push(ingredientId);
 
@@ -261,5 +261,24 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// GET ingredients with ≤ 20% remaining quantity
+router.get("/low-stock", async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT 
+        ingredient_id, name, category, brand, unit, price, 
+        quantity, initial_quantity, cost_per_unit, purchase_date,
+        to_grams             
+      FROM ingredient
+      WHERE quantity <= initial_quantity * 0.2
+    `);
+    res.json(results);
+  } catch (err) {
+    console.error("Fetch low-stock ingredients error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 export default router;

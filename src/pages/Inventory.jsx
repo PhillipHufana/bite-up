@@ -18,12 +18,23 @@ const Inventory = () => {
   const [highlightedRowId, setHighlightedRowId] = useState([]);
   const [boldRowId, setBoldRowId] = useState([]);
   const [supplierName, setSupplierName] = useState("");
-  const [sharedPurchaseDate, setSharedPurchaseDate] = useState(() => {
-    const today = new Date().toISOString().split("T")[0];
-    return today;
-  });
+const [sharedPurchaseDate, setSharedPurchaseDate] = useState(() => {
+  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+  return today;
+});
 
+const [showLowStockModal, setShowLowStockModal] = useState(false);
 
+const normalizedDate = editData.purchase_date?.split("T")[0] || null;
+
+const toLocalDateInput = (dateStr) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const local = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+  return local.toISOString().split("T")[0];
+};
 
   //Form state for modal
   const [formItems, setFormItems] = useState([
@@ -207,10 +218,17 @@ useEffect(() => {
     }));
   };
 
-  const handleEditClick = (item) => {
-    setEditRowId(item.ingredient_id);
-    setEditData(item);
-  };
+const handleEditClick = (item) => {
+  setEditRowId(item.ingredient_id);
+  setEditData({
+    ...item,
+    purchase_date: new Date(item.purchase_date).toLocaleDateString("sv-SE"),
+
+  });
+
+};
+
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -226,7 +244,7 @@ useEffect(() => {
       price: parseFloat(editData.price),
       quantity: parseFloat(editData.quantity),
       cost_per_unit: parseFloat(editData.cost_per_unit),
-      purchase_date: editData.purchaseDate
+      purchase_date: normalizedDate,
     });
 
     if (parseFloat(editData.quantity) === 0) {
@@ -383,6 +401,14 @@ const formatDate = (isoString) => {
       value: n,
     }));
   };
+//for the low stock count
+const flatIngredients = Object.values(groupedData).flat();
+const lowStockCount = flatIngredients.filter(
+  item =>
+    item.initial_quantity &&
+    item.quantity / item.initial_quantity <= 0.2
+).length;
+
 
   const getBrandsByCategoryAndItem = (category, itemName) => {
     return Array.from(
@@ -400,10 +426,11 @@ const formatDate = (isoString) => {
       <Navbar activeTab="INVENTORY" />
 
       <main className="container mx-auto px-6 py-8">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <h2 className="font-[Marcellus] text-8xl sm:text-4xl font-bold text-amber-800">
             General Inventory
           </h2>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
           <button
             onClick={() => setShowModal(true)}
             className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center cursor-pointer space-x-2"
@@ -411,6 +438,84 @@ const formatDate = (isoString) => {
             <span>ADD NEW</span>
             <span className="text-lg">+</span>
           </button>
+          <button
+            onClick={() => setShowLowStockModal(true)}
+            className="relative px-4 py-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center cursor-pointer space-x-2"
+          >
+            Low Stocks
+
+            {lowStockCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+                {lowStockCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+          {showLowStockModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-red-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-900 to-amber-700 px-8 py-2 flex justify-between items-center">
+              <h3 className="text-2xl font-bold text-white">Low Stock Ingredients</h3>
+              <button
+                onClick={() => setShowLowStockModal(false)}
+                className="text-white hover:text-red-200 transition-colors p-2 hover:bg-white/10 rounded-full"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-8 max-h-[calc(90vh-100px)] overflow-y-auto">
+              <table className="w-full text-sm text-left border-collapse">
+                <thead>
+                  <tr className="bg-red-200 text-red-900">
+                    {/* <th className="px-4 py-2">Category</th> */}
+                    <th className="px-4 py-2">Name</th>
+                    <th className="px-4 py-2">Brand</th>
+                    <th className="px-4 py-2">Amount Left</th>
+                    <th className="px-4 py-2">Initial Quantity</th>
+                    <th className="px-4 py-2">Unit</th>
+                    <th className="px-4 py-2">Purchase Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {flatIngredients
+                    .filter(
+                      (item) =>
+                        item.initial_quantity &&
+                        item.quantity / item.initial_quantity <= 0.2
+                    )
+                    .map((item) => (
+                      <tr
+                        key={item.ingredient_id}
+                        className="hover:bg-red-50 transition-colors"
+                      >
+                        {/* <td className="px-4 py-2 border-t border-red-100">{item.category}</td> */}
+                        <td className="px-4 py-2 border-t border-red-100 font-semibold">{item.name}</td>
+                        <td className="px-4 py-2 border-t border-red-100 font-semibold">{item.brand}</td>
+                        <td className="px-4 py-2 border-t border-red-100 font-semibold">{item.quantity}</td>
+                        <td className="px-4 py-2 border-t border-red-100">{item.initial_quantity}</td>
+                        <td className="px-4 py-2 border-t border-red-100">{item.unit}</td>
+                        <td className="px-4 py-2 border-t border-red-100">{formatDate(item.purchase_date)}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+              <div className="text-right mt-6">
+                <button
+                  onClick={() => setShowLowStockModal(false)}
+                  className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white  px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 space-x-2 shadow-lg"
+                >
+                  Close
+                </button>
+                </div>
+              </div>
+            </div>
+            </div>
+          )}
+
         </div>
 
         {loading ? (
@@ -480,13 +585,19 @@ const formatDate = (isoString) => {
                               const isEditing =
                                 editRowId === item.ingredient_id;
                               return (
-                                <tr
-                                  key={item.ingredient_id}
-                                  className={`transition-colors duration-300
-                                    ${boldRowId.includes(item.ingredient_id) ? "font-bold" : ""}
-                                    ${highlightedRowId.includes(item.ingredient_id) ? "bg-yellow-200" : ""}
-                                  `}
-                                >
+                                  <tr
+                                    key={item.ingredient_id}
+                                    className={`transition-colors duration-300
+                                      ${boldRowId.includes(item.ingredient_id) ? "font-bold" : ""}
+                                      ${highlightedRowId.includes(item.ingredient_id) ? "bg-yellow-200" : ""}
+                                      ${
+                                        item.initial_quantity &&
+                                        item.quantity / item.initial_quantity <= 0.2
+                                          ? ""
+                                          : ""
+                                      }
+                                    `}
+                                  >
                                   <td className="px-4 py-3">
                                     {isEditing ? (
                                       <input
@@ -521,9 +632,15 @@ const formatDate = (isoString) => {
                                         className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
                                       />
                                     ) : (
-                                      item.quantity
+                                      <>
+                                        {item.quantity}
+                                        {item.initial_quantity && item.quantity / item.initial_quantity <= 0.2 && (
+                                          <span className="ml-2 text-red-600 font-semibold text-sm">(Low)</span>
+                                        )}
+                                      </>
                                     )}
                                   </td>
+
                                   {/* Unit - will always be 'gr' now */}
                                   <td className="px-4 py-3">
                                     {isEditing ? (
@@ -581,23 +698,22 @@ const formatDate = (isoString) => {
                                       item.cost_per_unit?.toFixed(4)
                                     )}
                                   </td>
-                                  {/* <td className="px-4 py-3">
+                                  <td className="px-4 py-3">
                                     {isEditing ? (
                                       <input
-                                        name="cost_per_unit"
-                                        value={editData.purc}
-                                        onChange={handleChange}
-                                        type="number"
-                                        step="0.00001"
+                                        // type="date"
+                                        name="purchase_date"
+                                        value={formatDate(editData.purchase_date) || ""}
+                                        // onChange={handleChange}
                                         className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
                                       />
                                     ) : (
-                                      item.cost_per_unit
+                                      formatDate(item.purchase_date)
                                     )}
-                                  </td> */}
-                                  <td className="px-4 py-3">
-                                    {formatDate(item.purchase_date)}
                                   </td>
+                                  {/* <td className="px-4 py-3">
+                                    {formatDate(item.purchase_date)}
+                                  </td> */}
                                   <td className="px-4 py-3">
                                     <div className="flex space-x-2">
                                       {isEditing ? (
@@ -706,7 +822,6 @@ const formatDate = (isoString) => {
                     required
                   />
                 </div>
-
                 {formItems.map((item, index) => (
                   <div
                     key={index}
@@ -932,20 +1047,6 @@ const formatDate = (isoString) => {
                           step="0.01"
                         />
                       </div>
-                      {/* Purchase Date */}
-                      {/* <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-amber-800 mb-2">
-                          Purchase Date <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="date"
-                          value={item.purchaseDate}
-                          onChange={(e) =>
-                            updateFormItem(index, "purchaseDate", e.target.value)
-                          }
-                          className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
-                        />
-                      </div> */}
                     </div>
                   </div>
                 ))}
