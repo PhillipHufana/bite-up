@@ -459,10 +459,13 @@ const formatDate = (isoString) => {
                                 Unit
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
+                                Grams per ml/pc
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
                                 Price
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
-                                Cost/unit
+                                Cost per gram
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
                                 Purchase Date
@@ -521,6 +524,7 @@ const formatDate = (isoString) => {
                                       item.quantity
                                     )}
                                   </td>
+                                  {/* Unit - will always be 'gr' now */}
                                   <td className="px-4 py-3">
                                     {isEditing ? (
                                       <input
@@ -528,9 +532,25 @@ const formatDate = (isoString) => {
                                         value={editData.unit}
                                         onChange={handleChange}
                                         className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                        disabled
                                       />
                                     ) : (
                                       item.unit
+                                    )}
+                                  </td>
+
+                                  {/* Grams per ml/pc (to_grams) */}
+                                  <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="to_grams"
+                                        value={editData.to_grams}
+                                        onChange={handleChange}
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                        disabled={editData.unit === "g" || editData.unit === "kg"}
+                                      />
+                                    ) : (
+                                      item.to_grams === "N/A" ? "N/A" : item.to_grams
                                     )}
                                   </td>
 
@@ -558,7 +578,7 @@ const formatDate = (isoString) => {
                                         className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
                                       />
                                     ) : (
-                                      item.cost_per_unit
+                                      item.cost_per_unit?.toFixed(4)
                                     )}
                                   </td>
                                   {/* <td className="px-4 py-3">

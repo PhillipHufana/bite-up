@@ -9,7 +9,8 @@ router.get("/", async (req, res) => {
     const [results] = await db.query(`
       SELECT 
         ingredient_id, name, category, brand, unit, price, 
-        quantity, cost_per_unit, purchase_date 
+        quantity, cost_per_unit, purchase_date,
+        to_grams             
       FROM ingredient
     `);
     res.json(results);
@@ -18,6 +19,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // POST /api/ingredient/bulk
 router.post("/bulk", async (req, res) => {
@@ -71,7 +73,6 @@ router.post("/bulk", async (req, res) => {
     return `${prefix}${String(max + 1).padStart(3, "0")}`;
   };
 
-  const receiptDate = purchase_date;
   const receiptId = await generateNextReceiptId();
 
   try {
@@ -83,82 +84,73 @@ router.post("/bulk", async (req, res) => {
         unit,
         price,
         quantity,
-        cost_per_unit,
-        to_grams // <-- New
+        to_grams
       } = item;
 
       if (!name || !category || price == null || quantity == null) continue;
 
-      const itemDate = purchase_date;
       let convertedQty = parseFloat(quantity);
       let normalizedUnit = unit.toLowerCase();
       let toGramsValue = to_grams;
+      let finalQuantity = convertedQty;
 
       switch (normalizedUnit) {
+        case "g":
         case "grams":
         case "gr":
-        case "g":
           normalizedUnit = "gr";
           toGramsValue = "N/A";
           break;
-
-        case "kilograms":
         case "kg":
-          convertedQty *= 1000;
+        case "kilograms":
+          finalQuantity *= 1000;
           normalizedUnit = "gr";
           toGramsValue = "N/A";
           break;
-
-        case "liters":
-        case "l":
-          convertedQty *= 1000;
-          toGramsValue = parseFloat(to_grams);
-          if (!isNaN(toGramsValue)) convertedQty *= toGramsValue;
-          normalizedUnit = "gr"; // ✅ force final unit to gr
-          break;
-
-        case "milliliters":
         case "ml":
+        case "milliliters":
           toGramsValue = parseFloat(to_grams);
-          if (!isNaN(toGramsValue)) convertedQty *= toGramsValue;
-          normalizedUnit = "gr"; // ✅ force final unit to gr
+          if (!isNaN(toGramsValue)) finalQuantity *= toGramsValue;
+          normalizedUnit = "gr";
           break;
-
+        case "l":
+        case "liters":
+          finalQuantity *= 1000;
+          toGramsValue = parseFloat(to_grams);
+          if (!isNaN(toGramsValue)) finalQuantity *= toGramsValue;
+          normalizedUnit = "gr";
+          break;
+        case "pc":
         case "pieces":
         case "piece":
-        case "pc":
           toGramsValue = parseFloat(to_grams);
-          if (!isNaN(toGramsValue)) convertedQty *= toGramsValue;
-          normalizedUnit = "gr"; // ✅ force final unit to gr
+          if (!isNaN(toGramsValue)) finalQuantity *= toGramsValue;
+          normalizedUnit = "gr";
           break;
-
         default:
           console.warn(`Unsupported unit: ${unit}`);
           continue;
       }
 
-
-      // Insert or update logic here, same as before...
-      // Make sure to save `toGramsValue` into the DB as `to_grams` column
+      const parsedPrice = parseFloat(price);
+      const costPerUnit = parsedPrice / finalQuantity;
 
       const [existingRows] = await db.query(
         `SELECT * FROM ingredient WHERE category = ? AND name = ? AND purchase_date = ?`,
-        [category, name, itemDate]
+        [category, name, purchase_date]
       );
 
       let ingredientId;
       if (existingRows.length > 0) {
         const existing = existingRows[0];
-        const incomingPrice = parseFloat(price);
-        const currentPrice = parseFloat(existing.price);
-        const updatedPrice = incomingPrice > currentPrice ? incomingPrice : currentPrice;
-        const updatedQuantity = parseFloat(existing.quantity) + convertedQty;
+        const updatedPrice = parsedPrice > existing.price ? parsedPrice : existing.price;
+        const updatedQuantity = parseFloat(existing.quantity) + finalQuantity;
 
         await db.query(
           `UPDATE ingredient 
-          SET price = ?, quantity = ?, cost_per_unit = ?, unit = ?, brand = ?, to_grams = ?
-          WHERE ingredient_id = ?`,
-          [updatedPrice, updatedQuantity, parseFloat(cost_per_unit) || 0, normalizedUnit, brand, toGramsValue, existing.ingredient_id]
+           SET price = ?, quantity = ?, cost_per_unit = ?, unit = ?, brand = ?, to_grams = ?
+           WHERE ingredient_id = ?`,
+          [updatedPrice, updatedQuantity, costPerUnit, normalizedUnit, brand, toGramsValue, existing.ingredient_id]
         );
 
         ingredientId = existing.ingredient_id;
@@ -167,9 +159,9 @@ router.post("/bulk", async (req, res) => {
         ingredientId = await generateNextId();
         await db.query(
           `INSERT INTO ingredient 
-          (ingredient_id, name, category, brand, unit, price, quantity, cost_per_unit, purchase_date, to_grams)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [ingredientId, name, category, brand, normalizedUnit, parseFloat(price), convertedQty, parseFloat(cost_per_unit) || 0, itemDate, toGramsValue]
+           (ingredient_id, name, category, brand, unit, price, quantity, cost_per_unit, purchase_date, to_grams)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [ingredientId, name, category, brand, normalizedUnit, parsedPrice, finalQuantity, costPerUnit, purchase_date, toGramsValue]
         );
         updatedIds.push(ingredientId);
 
@@ -178,15 +170,14 @@ router.post("/bulk", async (req, res) => {
         else completelyNewIds.push(ingredientId);
       }
 
-      receiptItems.push([ingredientId, convertedQty, parseFloat(price)]);
-      totalCost += parseFloat(price) * convertedQty;
+      receiptItems.push([ingredientId, finalQuantity, parsedPrice]);
+      totalCost += parsedPrice * finalQuantity;
     }
-
 
     await db.query(
       `INSERT INTO receipt (receipt_id, receipt_date, supplier_name, total_cost)
        VALUES (?, ?, ?, ?)`,
-      [receiptId, receiptDate, supplier_name, totalCost]
+      [receiptId, purchase_date, supplier_name, totalCost]
     );
 
     for (const [ingredientId, quantity, unit_price] of receiptItems) {
@@ -204,16 +195,13 @@ router.post("/bulk", async (req, res) => {
       newlyInserted,
       completelyNewIds,
       receiptId,
-      totalCost: totalCost.toFixed(2)
+      totalCost: totalCost.toFixed(2),
     });
   } catch (err) {
     console.error("Error processing bulk insert:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
-
-
-
 
 // UPDATE ingredient
 router.put("/:id", async (req, res) => {
