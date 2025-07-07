@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/solid";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/solid";
 import Navbar from "../components/navbar";
 import AddOrderModal from "../components/AddOrderModal";
 
@@ -16,6 +21,9 @@ const Orders = () => {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState([]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 10;
 
   const dropdownRef = useRef(null);
 
@@ -96,11 +104,14 @@ const Orders = () => {
     setFilteredOrders(filtered);
   }, [orders, filterDate, sortBy, orderBy]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [orders, filterDate, sortBy, orderBy]);
+
   const toggleDropdown = (dropdownName) => {
     setOpenDropdown((prev) => (prev === dropdownName ? null : dropdownName));
   };
 
-  // Outside click detection
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -112,6 +123,26 @@ const Orders = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  const indexOfLastOrder = currentPage * ordersPerPage;
+  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+  const currentOrders = filteredOrders.slice(
+    indexOfFirstOrder,
+    indexOfLastOrder
+  );
+  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
@@ -135,7 +166,6 @@ const Orders = () => {
           className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
           ref={dropdownRef}
         >
-          {/* Filter by Date */}
           <div>
             <label className="block mb-1 font-semibold text-amber-900">
               Filter by Date
@@ -148,7 +178,6 @@ const Orders = () => {
             />
           </div>
 
-          {/* Sort By Dropdown */}
           <div className="relative">
             <label className="block mb-1 font-semibold text-amber-900">
               Sort By
@@ -182,7 +211,6 @@ const Orders = () => {
             )}
           </div>
 
-          {/* Order Dropdown */}
           <div className="relative">
             <label className="block mb-1 font-semibold text-amber-900">
               Order
@@ -217,7 +245,6 @@ const Orders = () => {
           </div>
         </div>
 
-        {/* Orders Table */}
         {loading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
@@ -237,7 +264,7 @@ const Orders = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((order) => (
+                {currentOrders.map((order) => (
                   <tr
                     key={order.id}
                     className="odd:bg-white even:bg-amber-50 hover:bg-amber-100 transition"
@@ -254,6 +281,23 @@ const Orders = () => {
                 ))}
               </tbody>
             </table>
+
+            <div className="flex justify-center items-center gap-4 px-4 py-3 bg-white border-t border-amber-200">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className="p-2 rounded-full bg-amber-100 hover:bg-amber-200 disabled:opacity-50"
+              >
+                <ChevronLeftIcon className="w-5 h-5 text-amber-700" />
+              </button>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-full bg-amber-100 hover:bg-amber-200 disabled:opacity-50"
+              >
+                <ChevronRightIcon className="w-5 h-5 text-amber-700" />
+              </button>
+            </div>
           </div>
         )}
 
