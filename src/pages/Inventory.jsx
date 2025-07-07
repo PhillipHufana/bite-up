@@ -18,23 +18,23 @@ const Inventory = () => {
   const [highlightedRowId, setHighlightedRowId] = useState([]);
   const [boldRowId, setBoldRowId] = useState([]);
   const [supplierName, setSupplierName] = useState("");
-const [sharedPurchaseDate, setSharedPurchaseDate] = useState(() => {
-  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 10);
-  return today;
-});
+  const [sharedPurchaseDate, setSharedPurchaseDate] = useState(() => {
+    const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
+    return today;
+  });
 
-const [showLowStockModal, setShowLowStockModal] = useState(false);
+  const [showLowStockModal, setShowLowStockModal] = useState(false);
 
-const normalizedDate = editData.purchase_date?.split("T")[0] || null;
+  const normalizedDate = editData.purchase_date?.split("T")[0] || null;
 
-const toLocalDateInput = (dateStr) => {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  const local = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-  return local.toISOString().split("T")[0];
-};
+  const toLocalDateInput = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const local = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    return local.toISOString().split("T")[0];
+  };
 
   //Form state for modal
   const [formItems, setFormItems] = useState([
@@ -162,46 +162,44 @@ const toLocalDateInput = (dateStr) => {
   };
 
   useEffect(() => {
-  fetchIngredients();
-}, []);
-
+    fetchIngredients();
+  }, []);
 
   const fetchIngredients = async () => {
-  try {
-    const res = await axios.get("/api/ingredients");
-    const sorted = sortIngredients(res.data);
-    setIngredients(sorted);
-  } catch (err) {
-    console.error("Error fetching data:", err);
-  } finally {
-    setLoading(false);
-  }
-};
-//sorting the ingredients alphabetically and based on date in ascending order
-const sortIngredients = (items) =>
-  [...items].sort((a, b) => {
-    // 1. Category A → Z
-    const cat = a.category.localeCompare(b.category);
-    if (cat !== 0) return cat;
+    try {
+      const res = await axios.get("/api/ingredients");
+      const sorted = sortIngredients(res.data);
+      setIngredients(sorted);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  //sorting the ingredients alphabetically and based on date in ascending order
+  const sortIngredients = (items) =>
+    [...items].sort((a, b) => {
+      // 1. Category A → Z
+      const cat = a.category.localeCompare(b.category);
+      if (cat !== 0) return cat;
 
-    // 2. Name A → Z
-    const name = a.name.localeCompare(b.name);
-    if (name !== 0) return name;
+      // 2. Name A → Z
+      const name = a.name.localeCompare(b.name);
+      if (name !== 0) return name;
 
-    // 3. Purchase Date oldest → newest (FIFO)
-    return new Date(a.purchase_date) - new Date(b.purchase_date);
-  });
-
-useEffect(() => {
-  if (highlightedRowId.length > 0) {
-    const timeout = setTimeout(() => {
-      setHighlightedRowId([]); //This removes yellow highlight
+      // 3. Purchase Date oldest → newest (FIFO)
+      return new Date(a.purchase_date) - new Date(b.purchase_date);
     });
 
-    return () => clearTimeout(timeout);
-  }
-}, [highlightedRowId]);
+  useEffect(() => {
+    if (highlightedRowId.length > 0) {
+      const timeout = setTimeout(() => {
+        setHighlightedRowId([]); //This removes yellow highlight
+      });
 
+      return () => clearTimeout(timeout);
+    }
+  }, [highlightedRowId]);
 
   const groupByCategory = (items) => {
     return items.reduce((acc, item) => {
@@ -218,17 +216,13 @@ useEffect(() => {
     }));
   };
 
-const handleEditClick = (item) => {
-  setEditRowId(item.ingredient_id);
-  setEditData({
-    ...item,
-    purchase_date: new Date(item.purchase_date).toLocaleDateString("sv-SE"),
-
-  });
-
-};
-
-
+  const handleEditClick = (item) => {
+    setEditRowId(item.ingredient_id);
+    setEditData({
+      ...item,
+      purchase_date: new Date(item.purchase_date).toLocaleDateString("sv-SE"),
+    });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -236,28 +230,30 @@ const handleEditClick = (item) => {
   };
 
   const handleSave = async (id) => {
-  try {
-    await axios.put(`/api/ingredients/${id}`, {
-      name: editData.name,
-      brand: editData.brand,
-      unit: editData.unit,
-      price: parseFloat(editData.price),
-      quantity: parseFloat(editData.quantity),
-      cost_per_unit: parseFloat(editData.cost_per_unit),
-      purchase_date: normalizedDate,
-    });
+    try {
+      await axios.put(`/api/ingredients/${id}`, {
+        name: editData.name,
+        brand: editData.brand,
+        unit: editData.unit,
+        price: parseFloat(editData.price),
+        quantity: parseFloat(editData.quantity),
+        cost_per_unit: parseFloat(editData.cost_per_unit),
+        purchase_date: normalizedDate,
+      });
 
-    if (parseFloat(editData.quantity) === 0) {
-      await axios.delete(`/api/ingredients/${id}`);
+      if (parseFloat(editData.quantity) === 0) {
+        await axios.delete(`/api/ingredients/${id}`);
+      }
+
+      setEditRowId(null);
+      await fetchIngredients();
+    } catch (err) {
+      console.error(
+        "Update or delete failed:",
+        err.response?.data || err.message
+      );
     }
-
-    setEditRowId(null);
-    await fetchIngredients();
-  } catch (err) {
-    console.error("Update or delete failed:", err.response?.data || err.message);
-  }
-};
-
+  };
 
   const handleDelete = async (id) => {
     if (!id || typeof id !== "string") {
@@ -303,7 +299,6 @@ const handleEditClick = (item) => {
     });
   };
 
-
   const removeFormItem = (index) => {
     const updatedItems = [...formItems];
     updatedItems.splice(index, 1);
@@ -324,70 +319,73 @@ const handleEditClick = (item) => {
       },
     ]);
   };
-const formatDate = (isoString) => {
-  if (!isoString) return "-";
-  try {
-    const date = new Date(isoString);
-    const options = { year: "numeric", month: "long", day: "numeric" };
-    return date.toLocaleDateString("en-US", options);
-  } catch {
-    return "-";
-  }
-};
+  const formatDate = (isoString) => {
+    if (!isoString) return "-";
+    try {
+      const date = new Date(isoString);
+      const options = { year: "numeric", month: "long", day: "numeric" };
+      return date.toLocaleDateString("en-US", options);
+    } catch {
+      return "-";
+    }
+  };
 
   const handleModalSave = async () => {
-  try {
-    if (!formItems || formItems.length === 0) return;
+    try {
+      if (!formItems || formItems.length === 0) return;
 
-    const response = await axios.post("/api/ingredients/bulk", {
-      supplier_name: supplierName || "Unknown Supplier",
-      purchase_date: sharedPurchaseDate,
-      items: formItems.map((item) => {
-        let toGrams = item.to_grams;
-        if (item.unit === "g" || item.unit === "kg") {
-          toGrams = "N/A";
-        }
+      const response = await axios.post("/api/ingredients/bulk", {
+        supplier_name: supplierName || "Unknown Supplier",
+        purchase_date: sharedPurchaseDate,
+        items: formItems.map((item) => {
+          let toGrams = item.to_grams;
+          if (item.unit === "g" || item.unit === "kg") {
+            toGrams = "N/A";
+          }
 
-        return {
-          category: item.category,
-          name: item.itemName,
-          brand: item.brand,
-          unit: item.unit,
-          quantity: Number.parseFloat(item.quantity),
-          price: Number.parseFloat(item.unitPrice),
-          cost_per_unit: 0,
-          to_grams: toGrams,
-        };
-      }),
-    });
+          return {
+            category: item.category,
+            name: item.itemName,
+            brand: item.brand,
+            unit: item.unit,
+            quantity: Number.parseFloat(item.quantity),
+            price: Number.parseFloat(item.unitPrice),
+            cost_per_unit: 0,
+            to_grams: toGrams,
+          };
+        }),
+      });
 
-    const { newlyInserted, completelyNewIds } = response.data;
+      const { newlyInserted, completelyNewIds } = response.data;
 
-    setBoldRowId((prev) => [...prev, ...newlyInserted]);
-    setHighlightedRowId(completelyNewIds);
+      setBoldRowId((prev) => [...prev, ...newlyInserted]);
+      setHighlightedRowId(completelyNewIds);
 
-    setSupplierName("");
-    setSharedPurchaseDate("");
-    setFormItems([
-      {
-        category: "",
-        itemName: "",
-        brand: "",
-        unit: "",
-        unitPrice: "",
-        quantity: "",
-        to_grams: "",
-      },
-    ]);
+      setSupplierName("");
+      setSharedPurchaseDate("");
+      setFormItems([
+        {
+          category: "",
+          itemName: "",
+          brand: "",
+          unit: "",
+          unitPrice: "",
+          quantity: "",
+          to_grams: "",
+        },
+      ]);
 
-    await fetchIngredients();
-  } catch (err) {
-    console.error("Error saving multiple items:", err.response?.data || err.message);
-  } finally {
-    // ✅ Ensure this always runs
-    setShowModal(false);
-  }
-};
+      await fetchIngredients();
+    } catch (err) {
+      console.error(
+        "Error saving multiple items:",
+        err.response?.data || err.message
+      );
+    } finally {
+      // ✅ Ensure this always runs
+      setShowModal(false);
+    }
+  };
 
   const groupedData = groupByCategory(ingredients);
 
@@ -401,14 +399,12 @@ const formatDate = (isoString) => {
       value: n,
     }));
   };
-//for the low stock count
-const flatIngredients = Object.values(groupedData).flat();
-const lowStockCount = flatIngredients.filter(
-  item =>
-    item.initial_quantity &&
-    item.quantity / item.initial_quantity <= 0.2
-).length;
-
+  //for the low stock count
+  const flatIngredients = Object.values(groupedData).flat();
+  const lowStockCount = flatIngredients.filter(
+    (item) =>
+      item.initial_quantity && item.quantity / item.initial_quantity <= 0.2
+  ).length;
 
   const getBrandsByCategoryAndItem = (category, itemName) => {
     return Array.from(
@@ -425,97 +421,109 @@ const lowStockCount = flatIngredients.filter(
       {/* Adds the Navbar component */}
       <Navbar activeTab="INVENTORY" />
 
-      <main className="container mx-auto px-6 py-8">
+       <main className="container mx-auto px-6 py-10 max-w-6xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <h2 className="font-[Marcellus] text-8xl sm:text-4xl font-bold text-amber-800">
             General Inventory
           </h2>
           <div className="flex flex-wrap gap-2 sm:gap-3">
-          <button
-            onClick={() => setShowModal(true)}
-            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center cursor-pointer space-x-2"
-          >
-            <span>ADD NEW</span>
-            <span className="text-lg">+</span>
-          </button>
-          <button
-            onClick={() => setShowLowStockModal(true)}
-            className="relative px-4 py-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center cursor-pointer space-x-2"
-          >
-            Low Stocks
-
-            {lowStockCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
-                {lowStockCount}
-              </span>
-            )}
-          </button>
-        </div>
+            <button
+              onClick={() => setShowModal(true)}
+              className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center cursor-pointer space-x-2"
+            >
+              <span>ADD NEW</span>
+              <span className="text-lg">+</span>
+            </button>
+            <button
+              onClick={() => setShowLowStockModal(true)}
+              className="relative px-4 py-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center cursor-pointer space-x-2"
+            >
+              Low Stocks
+              {lowStockCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+                  {lowStockCount}
+                </span>
+              )}
+            </button>
+          </div>
 
           {showLowStockModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-red-200">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-red-900 to-amber-700 px-8 py-2 flex justify-between items-center">
-              <h3 className="text-2xl font-bold text-white">Low Stock Ingredients</h3>
-              <button
-                onClick={() => setShowLowStockModal(false)}
-                className="text-white hover:text-red-200 transition-colors p-2 hover:bg-white/10 rounded-full"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-red-200">
+                {/* Modal Header */}
+                <div className="bg-gradient-to-r from-red-900 to-amber-700 px-8 py-2 flex justify-between items-center">
+                  <h3 className="text-2xl font-bold text-white">
+                    Low Stock Ingredients
+                  </h3>
+                  <button
+                    onClick={() => setShowLowStockModal(false)}
+                    className="text-white hover:text-red-200 transition-colors p-2 hover:bg-white/10 rounded-full"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
 
-            {/* Modal Content */}
-            <div className="p-8 max-h-[calc(90vh-100px)] overflow-y-auto">
-              <table className="w-full text-sm text-left border-collapse">
-                <thead>
-                  <tr className="bg-red-200 text-red-900">
-                    {/* <th className="px-4 py-2">Category</th> */}
-                    <th className="px-4 py-2">Name</th>
-                    <th className="px-4 py-2">Brand</th>
-                    <th className="px-4 py-2">Amount Left</th>
-                    <th className="px-4 py-2">Initial Quantity</th>
-                    <th className="px-4 py-2">Unit</th>
-                    <th className="px-4 py-2">Purchase Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {flatIngredients
-                    .filter(
-                      (item) =>
-                        item.initial_quantity &&
-                        item.quantity / item.initial_quantity <= 0.2
-                    )
-                    .map((item) => (
-                      <tr
-                        key={item.ingredient_id}
-                        className="hover:bg-red-50 transition-colors"
-                      >
-                        {/* <td className="px-4 py-2 border-t border-red-100">{item.category}</td> */}
-                        <td className="px-4 py-2 border-t border-red-100 font-semibold">{item.name}</td>
-                        <td className="px-4 py-2 border-t border-red-100 font-semibold">{item.brand}</td>
-                        <td className="px-4 py-2 border-t border-red-100 font-semibold">{item.quantity}</td>
-                        <td className="px-4 py-2 border-t border-red-100">{item.initial_quantity}</td>
-                        <td className="px-4 py-2 border-t border-red-100">{item.unit}</td>
-                        <td className="px-4 py-2 border-t border-red-100">{formatDate(item.purchase_date)}</td>
+                {/* Modal Content */}
+                <div className="p-8 max-h-[calc(90vh-100px)] overflow-y-auto">
+                  <table className="w-full text-sm text-left border-collapse">
+                    <thead>
+                      <tr className="bg-red-200 text-red-900">
+                        {/* <th className="px-4 py-2">Category</th> */}
+                        <th className="px-4 py-2">Name</th>
+                        <th className="px-4 py-2">Brand</th>
+                        <th className="px-4 py-2">Amount Left</th>
+                        <th className="px-4 py-2">Initial Quantity</th>
+                        <th className="px-4 py-2">Unit</th>
+                        <th className="px-4 py-2">Purchase Date</th>
                       </tr>
-                    ))}
-                </tbody>
-              </table>
-              <div className="text-right mt-6">
-                <button
-                  onClick={() => setShowLowStockModal(false)}
-                  className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white  px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 space-x-2 shadow-lg"
-                >
-                  Close
-                </button>
+                    </thead>
+                    <tbody>
+                      {flatIngredients
+                        .filter(
+                          (item) =>
+                            item.initial_quantity &&
+                            item.quantity / item.initial_quantity <= 0.2
+                        )
+                        .map((item) => (
+                          <tr
+                            key={item.ingredient_id}
+                            className="hover:bg-red-50 transition-colors"
+                          >
+                            {/* <td className="px-4 py-2 border-t border-red-100">{item.category}</td> */}
+                            <td className="px-4 py-2 border-t border-red-100 font-semibold">
+                              {item.name}
+                            </td>
+                            <td className="px-4 py-2 border-t border-red-100 font-semibold">
+                              {item.brand}
+                            </td>
+                            <td className="px-4 py-2 border-t border-red-100 font-semibold">
+                              {item.quantity}
+                            </td>
+                            <td className="px-4 py-2 border-t border-red-100">
+                              {item.initial_quantity}
+                            </td>
+                            <td className="px-4 py-2 border-t border-red-100">
+                              {item.unit}
+                            </td>
+                            <td className="px-4 py-2 border-t border-red-100">
+                              {formatDate(item.purchase_date)}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                  <div className="text-right mt-6">
+                    <button
+                      onClick={() => setShowLowStockModal(false)}
+                      className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white  px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 space-x-2 shadow-lg"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-            </div>
           )}
-
         </div>
 
         {loading ? (
@@ -585,19 +593,30 @@ const lowStockCount = flatIngredients.filter(
                               const isEditing =
                                 editRowId === item.ingredient_id;
                               return (
-                                  <tr
-                                    key={item.ingredient_id}
-                                    className={`transition-colors duration-300
-                                      ${boldRowId.includes(item.ingredient_id) ? "font-bold" : ""}
-                                      ${highlightedRowId.includes(item.ingredient_id) ? "bg-yellow-200" : ""}
+                                <tr
+                                  key={item.ingredient_id}
+                                  className={`transition-colors duration-300
+                                      ${
+                                        boldRowId.includes(item.ingredient_id)
+                                          ? "font-bold"
+                                          : ""
+                                      }
+                                      ${
+                                        highlightedRowId.includes(
+                                          item.ingredient_id
+                                        )
+                                          ? "bg-yellow-200"
+                                          : ""
+                                      }
                                       ${
                                         item.initial_quantity &&
-                                        item.quantity / item.initial_quantity <= 0.2
+                                        item.quantity / item.initial_quantity <=
+                                          0.2
                                           ? ""
                                           : ""
                                       }
                                     `}
-                                  >
+                                >
                                   <td className="px-4 py-3">
                                     {isEditing ? (
                                       <input
@@ -634,9 +653,14 @@ const lowStockCount = flatIngredients.filter(
                                     ) : (
                                       <>
                                         {item.quantity}
-                                        {item.initial_quantity && item.quantity / item.initial_quantity <= 0.2 && (
-                                          <span className="ml-2 text-red-600 font-semibold text-sm">(Low)</span>
-                                        )}
+                                        {item.initial_quantity &&
+                                          item.quantity /
+                                            item.initial_quantity <=
+                                            0.2 && (
+                                            <span className="ml-2 text-red-600 font-semibold text-sm">
+                                              (Low)
+                                            </span>
+                                          )}
                                       </>
                                     )}
                                   </td>
@@ -664,10 +688,15 @@ const lowStockCount = flatIngredients.filter(
                                         value={editData.to_grams}
                                         onChange={handleChange}
                                         className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
-                                        disabled={editData.unit === "g" || editData.unit === "kg"}
+                                        disabled={
+                                          editData.unit === "g" ||
+                                          editData.unit === "kg"
+                                        }
                                       />
+                                    ) : item.to_grams === "N/A" ? (
+                                      "N/A"
                                     ) : (
-                                      item.to_grams === "N/A" ? "N/A" : item.to_grams
+                                      item.to_grams
                                     )}
                                   </td>
 
@@ -703,7 +732,10 @@ const lowStockCount = flatIngredients.filter(
                                       <input
                                         // type="date"
                                         name="purchase_date"
-                                        value={formatDate(editData.purchase_date) || ""}
+                                        value={
+                                          formatDate(editData.purchase_date) ||
+                                          ""
+                                        }
                                         // onChange={handleChange}
                                         className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
                                       />
@@ -976,7 +1008,6 @@ const lowStockCount = flatIngredients.filter(
                         />
                       </div>
 
-
                       {/* Unit */}
                       <div className="space-y-2">
                         <label className="block text-sm font-semibold text-amber-800 mb-2">
@@ -1015,7 +1046,11 @@ const lowStockCount = flatIngredients.filter(
                         </label>
                         <input
                           type="text"
-                          value={item.to_grams === "N/A" ? "N/A" : item.to_grams || ""}
+                          value={
+                            item.to_grams === "N/A"
+                              ? "N/A"
+                              : item.to_grams || ""
+                          }
                           disabled={item.unit === "g" || item.unit === "kg"}
                           onChange={(e) =>
                             updateFormItem(index, "to_grams", e.target.value)
@@ -1028,7 +1063,6 @@ const lowStockCount = flatIngredients.filter(
                           className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
                         />
                       </div>
-
 
                       {/* Unit Price */}
                       <div className="space-y-2">

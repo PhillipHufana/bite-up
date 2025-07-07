@@ -117,7 +117,7 @@ const Orders = () => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
       <Navbar activeTab="ORDERS" />
 
-      <main className="container mx-auto px-6 py-8">
+      <main className="container mx-auto px-6 py-10 max-w-6xl">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <h2 className="font-[Marcellus] text-8xl sm:text-4xl font-bold text-amber-800">
             Orders

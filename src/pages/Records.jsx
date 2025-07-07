@@ -33,9 +33,9 @@ function RecordsPage() {
       <Navbar activeTab="RECORDS" />
 
       <main className="container mx-auto px-6 py-10 max-w-6xl">
-        <h1 className="text-8xl sm:text-4xl font-[Marcellus] text-amber-800 mb-8">
+        <h2 className="text-8xl sm:text-4xl font-bold font-[Marcellus] text-amber-800 mb-8">
           Records
-        </h1>
+        </h2>
 
         <div className="flex space-x-4 border-b-2 border-amber-300 mb-6">
           {tabs.map((tab) => (
