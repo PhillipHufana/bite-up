@@ -231,7 +231,7 @@ const CostingCalculator = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <MetricCard label="Total Ingredient Cost" value={totalCostIngredients} color="red" prefix="₱" />
-                  <MetricCard label="Cost per Portion" value={costPerPortion} color="red" prefix="₱" />
+                  <MetricCard label="Cost of Ingredient per Portion" value={costPerPortion} color="red" prefix="₱" />
                   <MetricCard label="Overhead Expense (40%)" value={overheadExpense} color="orange" prefix="₱" />
                   <MetricCard label="Food Cost Percentage" value={foodCostPercentage} color="purple" suffix="%" />
                 </div>
