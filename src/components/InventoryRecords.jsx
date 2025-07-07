@@ -56,29 +56,29 @@ function InventoryRecords() {
     ? records
         .filter((record) => {
           if (!filterDate) return true;
-          const localDate = new Date(record.date).toLocaleDateString("en-CA");
+          const localDate = new Date(record.date).toISOString().slice(0, 10);
           return localDate === filterDate;
         })
         .sort((a, b) => {
           let valA, valB;
           switch (sortBy) {
-            case "name":
+            case "Name":
               valA = a.id.toLowerCase();
               valB = b.id.toLowerCase();
               break;
-            case "date":
+            case "Date":
               valA = new Date(a.date);
               valB = new Date(b.date);
               break;
-            case "cost":
-              valA = parseFloat(a.totalCost.replace("P ", ""));
-              valB = parseFloat(b.totalCost.replace("P ", ""));
+            case "Cost":
+              valA = parseFloat(a.totalCost.replace("P ", "")) || 0;
+              valB = parseFloat(b.totalCost.replace("P ", "")) || 0;
               break;
             default:
               return 0;
           }
           const comparison = valA > valB ? 1 : valA < valB ? -1 : 0;
-          return orderBy === "newest" ? -comparison : comparison;
+          return orderBy === "Newest First" ? -comparison : comparison;
         })
     : [];
 
