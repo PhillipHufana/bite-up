@@ -3,6 +3,7 @@ import db from "../db.js";
 
 const router = express.Router();
 
+// Auto-generate Customer ID
 async function generateCustomerId() {
   const [rows] = await db.query(
     "SELECT customer_id FROM customer ORDER BY customer_id DESC LIMIT 1"
@@ -11,9 +12,11 @@ async function generateCustomerId() {
   let nextNum = 1;
   if (rows.length > 0) {
     const lastId = rows[0].customer_id;
-    const lastNum = parseInt(lastId.split("-").pop(), 10);
-    nextNum = lastNum + 1;
+    const parts = lastId.split("-");
+    const lastNum = parseInt(parts[parts.length - 1], 10);
+    nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
   }
+
   const padded = String(nextNum).padStart(3, "0");
   return `CUS-2025-${padded}`;
 }
@@ -39,8 +42,15 @@ router.post("/", async (req, res) => {
 
   try {
     const newId = await generateCustomerId();
-    const query = `INSERT INTO customer (customer_id, first_name, last_name, contact_number, email, address)
-                   VALUES (?, ?, ?, ?, ?, ?)`;
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (date only)
+
+    const query = `
+      INSERT INTO customer 
+        (customer_id, first_name, last_name, contact_number, email, address, created_at)
+      VALUES 
+        (?, ?, ?, ?, ?, ?, ?)
+    `;
+
     await db.query(query, [
       newId,
       first_name,
@@ -48,7 +58,9 @@ router.post("/", async (req, res) => {
       contact_number,
       email,
       address,
+      today,
     ]);
+
     res.status(201).json({ message: "Customer added successfully", id: newId });
   } catch (error) {
     console.error("POST /customer error:", error);

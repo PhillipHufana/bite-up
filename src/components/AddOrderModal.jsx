@@ -2,16 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import Button from "./ui/Button.jsx";
+import { X, Plus, Trash2 } from "lucide-react";
 import Input from "./ui/Input.jsx";
-import Label from "./ui/Label.jsx";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "./ui/Dialog.jsx";
-import { Plus, Trash2 } from "lucide-react";
 
 function AddOrderModal({ isOpen, onClose, onAddOrder, customers }) {
   const [formData, setFormData] = useState({
@@ -42,18 +40,21 @@ function AddOrderModal({ isOpen, onClose, onAddOrder, customers }) {
     fetchProducts();
   }, []);
 
-  const handleNameSearch = useCallback((firstName, lastName) => {
-    const results = customers.filter((c) => {
-      const fullName = c.name.toLowerCase();
-      return (
-        fullName.includes(firstName.toLowerCase()) &&
-        fullName.includes(lastName.toLowerCase())
-      );
-    });
-    setSearchResults(results);
-    setShowResults(true);
-    setCustomerNotFound(results.length === 0 && (firstName || lastName));
-  }, [customers]);
+  const handleNameSearch = useCallback(
+    (firstName, lastName) => {
+      const results = customers.filter((c) => {
+        const fullName = c.name.toLowerCase();
+        return (
+          fullName.includes(firstName.toLowerCase()) &&
+          fullName.includes(lastName.toLowerCase())
+        );
+      });
+      setSearchResults(results);
+      setShowResults(true);
+      setCustomerNotFound(results.length === 0 && (firstName || lastName));
+    },
+    [customers]
+  );
 
   const handleFirstNameChange = (value) => {
     setFormData((prev) => ({ ...prev, firstName: value }));
@@ -114,235 +115,281 @@ function AddOrderModal({ isOpen, onClose, onAddOrder, customers }) {
     );
   };
 
-    const handleSubmit = async (e) => {
-      e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-      const customer = customers.find((c) => {
-        const fullName = c.name.toLowerCase();
-        return (
-          fullName.includes(formData.firstName.toLowerCase()) &&
-          fullName.includes(formData.lastName.toLowerCase())
-        );
-      });
-
-      if (!customer) {
-        alert("Customer not found! Please add them to the Customer Profile.");
-        return;
-      }
-
-      const validItems = orderItems.filter(
-        (i) =>
-          i.name &&
-          i.quantity > 0 &&
-          products.some((p) => p.name.toLowerCase() === i.name.toLowerCase())
+    const customer = customers.find((c) => {
+      const fullName = c.name.toLowerCase();
+      return (
+        fullName.includes(formData.firstName.toLowerCase()) &&
+        fullName.includes(formData.lastName.toLowerCase())
       );
+    });
 
-      if (validItems.length === 0) {
-        alert("Please add valid products that exist in the system.");
-        return; 
-      }
+    if (!customer) {
+      alert("Customer not found! Please add them to the Customer Profile.");
+      return;
+    }
 
-      try {
-        const payload = {
-          customer_id: customer.id,
-          orderItems: validItems,
-          total_amount: calculateTotal(),
-          order_date: formData.orderDate,
-        };
-        await axios.post("/api/orders", payload);
+    const validItems = orderItems.filter(
+      (i) =>
+        i.name &&
+        i.quantity > 0 &&
+        products.some((p) => p.name.toLowerCase() === i.name.toLowerCase())
+    );
 
-        alert("Order saved and ingredients deducted!");
-        onAddOrder?.();
-        onClose();
-      } catch (err) {
-        console.error("Order failed:", err.response?.data || err.message);
-        alert("Failed to save order.");
-      }
-    };
+    if (validItems.length === 0) {
+      alert("Please add valid products that exist in the system.");
+      return;
+    }
+
+    try {
+      const payload = {
+        customer_id: customer.id,
+        orderItems: validItems,
+        total_amount: calculateTotal(),
+        order_date: formData.orderDate,
+      };
+      await axios.post("/api/orders", payload);
+
+      alert("Order saved and ingredients deducted!");
+      onAddOrder?.();
+      onClose();
+    } catch (err) {
+      console.error("Order failed:", err.response?.data || err.message);
+      alert("Failed to save order.");
+    }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="sm:max-w-3xl max-h-[70vh] overflow-y-auto"
-        style={{ backgroundColor: "#FEF2E5" }}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-poppins text-center mb-4 mt-4 text-black">
-            ADD NEW ORDER
-          </DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Customer Info */}
-          <div className="grid grid-cols-2 gap-4 relative">
-            <div>
-              <Label className="font-poppins">Customer's First Name</Label>
-              <Input
-                value={formData.firstName}
-                onChange={(e) => handleFirstNameChange(e.target.value)}
-                className={`bg-[#D9D9D9] border-none ${
-                  customerNotFound ? "ring-2 ring-red-400" : ""
-                }`}
-                required
-              />
-            </div>
-            <div>
-              <Label className="font-poppins">Customer's Last Name</Label>
-              <Input
-                value={formData.lastName}
-                onChange={(e) => handleLastNameChange(e.target.value)}
-                className={`bg-[#D9D9D9] border-none ${
-                  customerNotFound ? "ring-2 ring-red-400" : ""
-                }`}
-                required
-              />
+    <>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[80vh] overflow-hidden border border-amber-200 flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-amber-700 to-orange-900 px-8 py-2 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">Add New Order</h2>
+              <button
+                onClick={onClose}
+                className="text-white hover:text-amber-200 transition-colors p-2 hover:bg-white/10 rounded-full"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
 
-            {showResults && (
-              <div className="absolute top-full left-0 right-0 z-10 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                {searchResults.length > 0 ? (
-                  searchResults.map((customer) => (
-                    <div
-                      key={customer.id}
-                      className="p-2 hover:bg-gray-100 cursor-pointer font-poppins"
-                      onClick={() => selectCustomer(customer)}
-                    >
-                      {customer.name}
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-2 text-red-600 font-poppins">
-                    Customer not found! Add them in the Customer Profile first.
+            {/* Modal Body */}
+            <div className="p-8 overflow-y-auto flex-1 space-y-8">
+              {/* Customer Info */}
+              <div className="flex items-start gap-6 relative">
+                {/* First Name */}
+                <div className="flex-1 space-y-2">
+                  <label className="block text-sm font-semibold text-amber-800">
+                    Customer's First Name{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    list="customerFirstNames"
+                    value={formData.firstName}
+                    onChange={(e) => handleFirstNameChange(e.target.value)}
+                    className={`w-full border border-amber-200 rounded-xl px-4 py-2 text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-300 ${
+                      customerNotFound ? "ring-2 ring-red-400" : ""
+                    }`}
+                    required
+                  />
+                </div>
+
+                {/* Last Name */}
+                <div className="flex-1 space-y-2">
+                  <label className="block text-sm font-semibold text-amber-800">
+                    Customer's Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    list="customerLastNames"
+                    value={formData.lastName}
+                    onChange={(e) => handleLastNameChange(e.target.value)}
+                    className={`w-full border border-amber-200 rounded-xl px-4 py-2 text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-300 ${
+                      customerNotFound ? "ring-2 ring-red-400" : ""
+                    }`}
+                    required
+                  />
+                </div>
+
+                {/* Search Results */}
+                {showResults && (
+                  <div className="absolute top-full left-0 right-0 z-10 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                    {searchResults.length > 0 ? (
+                      searchResults.map((customer) => (
+                        <div
+                          key={customer.id}
+                          className="p-2 hover:bg-gray-100 cursor-pointer font-poppins"
+                          onClick={() => selectCustomer(customer)}
+                        >
+                          {customer.name}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-2 text-red-600 font-poppins">
+                        Customer not found! Add them in the Customer Profile
+                        first.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
 
-          {/* Order Items */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <Label className="font-poppins text-lg">Order Items</Label>
-              <Button
-                type="button"
-                onClick={addOrderItem}
-                className="bg-[#C1801C] hover:bg-[#A6670F] text-white px-3 py-1 rounded-full font-poppins text-sm"
-              >
-                <Plus className="w-4 h-4 mr-1" /> Add Item
-              </Button>
-            </div>
+              {/* Order Items */}
+              {orderItems.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-8 shadow-lg border-2 border-amber-100 hover:border-amber-200 transition-all duration-300"
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-amber-800">
+                          Item {index + 1}
+                        </h4>
+                        <p className="text-amber-600 text-sm">
+                          Enter the item details below
+                        </p>
+                      </div>
+                    </div>
+                    {orderItems.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeOrderItem(item.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-all duration-200"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
 
-            {orderItems.map((item, index) => (
-              <div
-                key={item.id}
-                className="bg-[#D9D9D9] rounded-lg p-4 space-y-3"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-poppins font-semibold">
-                    Item {index + 1}
-                  </span>
-                  {orderItems.length > 1 && (
-                    <Button
-                      type="button"
-                      onClick={() => removeOrderItem(item.id)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-sm"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label className="font-poppins text-sm">Item Name</Label>
-                    <input
-                      list={`products-${item.id}`}
-                      value={item.name}
-                      onChange={(e) =>
-                        updateOrderItem(item.id, "name", e.target.value)
-                      }
-                      className="bg-white border border-gray-300 rounded-md p-2 w-full"
-                      required
-                    />
-                    <datalist id={`products-${item.id}`}>
-                      {Array.isArray(products) &&
-                        products.map((p, idx) => (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Item Name */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-amber-800 mb-2">
+                        Item Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        list={`products-${item.id}`}
+                        value={item.name}
+                        onChange={(e) =>
+                          updateOrderItem(item.id, "name", e.target.value)
+                        }
+                        className="w-full border border-amber-300 rounded-xl px-4 py-2 text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                        required
+                      />
+                      <datalist id={`products-${item.id}`}>
+                        {products.map((p, idx) => (
                           <option key={idx} value={p.name} />
                         ))}
-                    </datalist>
-                  </div>
-                  <div>
-                    <Label className="font-poppins text-sm">Quantity</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateOrderItem(
-                          item.id,
-                          "quantity",
-                          parseInt(e.target.value) || 1
-                        )
-                      }
-                      className="bg-white border-gray-300"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label className="font-poppins text-sm">Price</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.price}
-                      readOnly
-                      className="bg-white border-gray-300 text-gray-600"
-                      required
-                    />
+                      </datalist>
+                    </div>
+
+                    {/* Quantity */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-amber-800 mb-2">
+                        Quantity <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          updateOrderItem(
+                            item.id,
+                            "quantity",
+                            parseInt(e.target.value) || 1
+                          )
+                        }
+                        className="w-full border border-amber-300 rounded-xl px-4 py-2 text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                        required
+                      />
+                    </div>
+
+                    {/* Price */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-amber-800 mb-2">
+                        Price <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.price}
+                        readOnly
+                        className="w-full border border-amber-300 rounded-xl px-4 py-2 text-gray-600"
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            <div className="bg-[#D9D9D9] rounded-lg p-4">
+              {/* Order Date */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-amber-800 mb-2">
+                  Order Date <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="date"
+                  value={formData.orderDate}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      orderDate: e.target.value,
+                    }))
+                  }
+                  className="w-full border border-amber-200 rounded-xl px-4 py-2 text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Total Amount */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 shadow-inner border border-amber-100">
               <div className="flex justify-between items-center">
-                <span className="font-poppins text-lg font-semibold">
+                <span className="text-lg font-semibold text-amber-800">
                   Total Amount:
                 </span>
-                <span className="font-poppins text-xl font-bold text-green-600">
-                  P {calculateTotal().toFixed(2)}
+                <span className="text-2xl font-bold text-green-700">
+                  ₱ {calculateTotal().toFixed(2)}
                 </span>
               </div>
             </div>
-          </div>
 
-          {/* Order Date */}
-          <div>
-            <Label className="font-poppins">Order Date</Label>
-            <Input
-              type="date"
-              value={formData.orderDate}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  orderDate: e.target.value,
-                }))
-              }
-              className="bg-[#D9D9D9] border-none"
-              required
-            />
+            {/* Modal Footer */}
+            <div className="bg-gradient-to-r from-amber-100 to-orange-100 px-8 py-3 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-amber-200">
+              <div className="text-sm text-amber-700">
+                <span className="font-semibold">{orderItems.length}</span>{" "}
+                {orderItems.length === 1 ? "item" : "items"} ready to save
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={addOrderItem}
+                  className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 flex items-center space-x-2 shadow-lg"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Item</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
+                >
+                  Save All Items
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div className="flex justify-end pt-4">
-            <button
-              type="submit"
-              className="bg-[#1F9254] hover:bg-green-700 text-white px-8 py-2 rounded-full font-poppins"
-            >
-              SAVE ORDER
-            </button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+      )}
+    </>
   );
 }
 
