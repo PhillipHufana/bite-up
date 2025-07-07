@@ -24,11 +24,8 @@ function CustomerProfile() {
 
       const customersWithHistory = await Promise.all(
         data.map(async (cust) => {
-          const historyRes = await fetch(
-            `/api/orders/history/${cust.customer_id}`
-          );
+          const historyRes = await fetch(`/api/customer/${cust.customer_id}/orders`);
           const orderHistory = await historyRes.json();
-
           const totalSpent = orderHistory.reduce(
             (sum, order) => sum + parseFloat(order.total),
             0
@@ -182,7 +179,7 @@ function CustomerProfile() {
                         </div>
 
                         <div className="space-y-1 mb-2">
-                          {order.items.split(", ").map((item, idx) => {
+                          {(order.items || "").split(", ").map((item, idx) => {
                             const match = item.match(
                               /^(\d+)x (.+?) @ ([\d.]+)$/
                             );

@@ -3,7 +3,7 @@ import db from "../db.js";
 
 const router = express.Router();
 
-// WEEKLY SALES
+// WEEKLY SALES 
 router.get("/weekly", async (req, res) => {
   try {
     const { year, month, week } = req.query;
@@ -19,10 +19,10 @@ router.get("/weekly", async (req, res) => {
     const monthEnd = new Date(y, m, 0);
     const weeks = [];
 
-    // First week: from 1st to first Saturday
+    // First week
     const firstWeekStart = new Date(monthStart);
     const firstWeekEnd = new Date(firstWeekStart);
-    const dow = firstWeekStart.getDay(); // Sunday=0
+    const dow = firstWeekStart.getDay(); 
     const daysToSat = (6 - dow + 7) % 7;
     firstWeekEnd.setDate(firstWeekStart.getDate() + daysToSat);
     if (firstWeekEnd > monthEnd) firstWeekEnd.setTime(monthEnd.getTime());
@@ -32,14 +32,14 @@ router.get("/weekly", async (req, res) => {
       end: firstWeekEnd.toISOString().slice(0, 10),
     });
 
-    // Remaining weeks: Sunday to Saturday
+    // Remaining weeks
     let currentStart = new Date(firstWeekEnd);
     currentStart.setDate(currentStart.getDate() + 1);
 
     while (currentStart <= monthEnd) {
       const weekStart = new Date(currentStart);
       const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setDate(weekStart.getDate() + 6);
       if (weekEnd > monthEnd) weekEnd.setTime(monthEnd.getTime());
 
       weeks.push({
@@ -57,12 +57,9 @@ router.get("/weekly", async (req, res) => {
 
     const [results] = await db.query(
       `
-      SELECT 
-        SUM(o.total_amount) AS total_sales
-      FROM orderhistory oh
-      JOIN orders o ON oh.order_id = o.order_id
-      WHERE oh.status = 'Completed'
-        AND DATE(oh.date) BETWEEN ? AND ?
+      SELECT SUM(total_amount) AS total_sales
+      FROM orders
+      WHERE DATE(order_date) BETWEEN ? AND ?
       `,
       [selectedWeek.start, selectedWeek.end]
     );
@@ -85,14 +82,10 @@ router.get("/monthly", async (req, res) => {
 
     const [results] = await db.query(
       `
-      SELECT 
-        SUM(o.total_amount) AS total_sales,
-        MONTH(oh.date) AS month
-      FROM orderhistory oh
-      JOIN orders o ON oh.order_id = o.order_id
-      WHERE oh.status = 'Completed'
-        AND oh.date BETWEEN ? AND ?
-      GROUP BY MONTH(oh.date)
+      SELECT SUM(total_amount) AS total_sales, MONTH(order_date) AS month
+      FROM orders
+      WHERE DATE(order_date) BETWEEN ? AND ?
+      GROUP BY MONTH(order_date)
       `,
       [start, end]
     );
@@ -111,14 +104,10 @@ router.get("/yearly", async (req, res) => {
 
     const [results] = await db.query(
       `
-      SELECT 
-        SUM(o.total_amount) AS total_sales,
-        YEAR(oh.date) AS year
-      FROM orderhistory oh
-      JOIN orders o ON oh.order_id = o.order_id
-      WHERE oh.status = 'Completed'
-        AND YEAR(oh.date) = ?
-      GROUP BY YEAR(oh.date)
+      SELECT SUM(total_amount) AS total_sales, YEAR(order_date) AS year
+      FROM orders
+      WHERE YEAR(order_date) = ?
+      GROUP BY YEAR(order_date)
       `,
       [year]
     );
@@ -130,7 +119,7 @@ router.get("/yearly", async (req, res) => {
   }
 });
 
-// TOP SELLING ITEMS
+// TOP SELLING ITEMS 
 router.get("/top-items", async (req, res) => {
   try {
     const [results] = await db.query(

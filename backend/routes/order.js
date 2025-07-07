@@ -7,7 +7,7 @@ const router = express.Router();
 router.get("/", async (req, res) => {
   const query = `
     SELECT 
-  okb.order_item_id AS id,
+  okb.order_id AS id,
   c.customer_id, c.first_name, c.last_name,
   GROUP_CONCAT(CONCAT(oi.quantity_ordered, 'x ', p.name) SEPARATOR ', ') AS order_name,
   okb.order_date AS delivery_date,
@@ -17,7 +17,7 @@ FROM orders okb
 JOIN customer c USING (customer_id)
 JOIN orderitem oi USING (order_id)
 JOIN product p USING (product_id)
-GROUP BY okb.order_item_id, c.customer_id, c.first_name, c.last_name, okb.order_date, okb.total_amount
+GROUP BY okb.order_id, c.customer_id, c.first_name, c.last_name, okb.order_date, okb.total_amount
 ORDER BY okb.order_date DESC
 
   `;
@@ -41,12 +41,13 @@ router.get("/products", async (req, res) => {
   }
 });
 
+
 // Insert order
 router.post("/", async (req, res) => {
-  const { customer_id, orderItems, total_amount, order_date } = req.body;
+  const { orderItems, customer_id, total_amount, order_date } = req.body;
 
-  if (!customer_id || !orderItems?.length || !total_amount || !order_date) {
-    return res.status(400).json({ error: "Missing required fields" });
+  if (!orderItems?.length || !customer_id) {
+    return res.status(400).json({ error: "Missing order items or customer ID" });
   }
 
   const connection = await db.getConnection();
@@ -54,7 +55,7 @@ router.post("/", async (req, res) => {
     await connection.beginTransaction();
     const year = new Date().getFullYear();
 
-    // Generate unique order_id
+    // Generate next ORDER ID
     const [[lastOrder]] = await connection.query(`
       SELECT order_id FROM orders
       WHERE order_id LIKE 'ORD-${year}-%'
@@ -63,23 +64,16 @@ router.post("/", async (req, res) => {
     let nextOrderNum = lastOrder
       ? parseInt(lastOrder.order_id.split("-")[2]) + 1
       : 1;
-    const order_id = `ORD-${year}-${String(nextOrderNum).padStart(3, "0")}`;
+    const orderId = `ORD-${year}-${String(nextOrderNum).padStart(3, "0")}`;
 
-    // Generate group order_item_id for orders summary
-    const [[lastGroup]] = await connection.query(`
-      SELECT order_item_id FROM orders
-      WHERE order_item_id LIKE 'OI-${year}-%'
-      ORDER BY order_item_id DESC LIMIT 1
-    `);
-    let nextGroupNum = lastGroup
-      ? parseInt(lastGroup.order_item_id.split("-")[2]) + 1
-      : 1;
-    const orderItemGroupId = `OI-${year}-${String(nextGroupNum).padStart(
-      3,
-      "0"
-    )}`;
+    // Create ORDER first
+    await connection.query(
+      `INSERT INTO orders (order_id, customer_id, order_date, total_amount)
+       VALUES (?, ?, ?, ?)`,
+      [orderId, customer_id, order_date || new Date(), total_amount || 0]
+    );
 
-    // Also fetch the last individual order_item_id for orderitem table
+    // Generate next order_item_id
     const [[lastItem]] = await connection.query(`
       SELECT order_item_id FROM orderitem
       WHERE order_item_id LIKE 'OI-${year}-%'
@@ -87,57 +81,50 @@ router.post("/", async (req, res) => {
     `);
     let nextItemNum = lastItem
       ? parseInt(lastItem.order_item_id.split("-")[2]) + 1
-      : nextGroupNum + 1;
+      : 1;
 
-    // Insert into orders
-    await connection.query(
-      `INSERT INTO orders (order_item_id, customer_id, order_id, order_date, total_amount)
-       VALUES (?, ?, ?, ?, ?)`,
-      [orderItemGroupId, customer_id, order_id, order_date, total_amount]
-    );
-
-    // INSERT INTO orderhistory
-    await connection.query(
-      `INSERT INTO orderhistory (orderhistory_id, customer_id, order_id, date, status)
-   VALUES (?, ?, ?, ?, ?)`,
-      [orderItemGroupId, customer_id, order_id, order_date, "Completed"]
-    );
-
-    // Insert each item into orderitem table
-    for (let i = 0; i < orderItems.length; i++) {
-      const item = orderItems[i];
-
+    for (const item of orderItems) {
       const [[productRow]] = await connection.query(
         `SELECT product_id FROM product WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1`,
         [item.name]
       );
-
-      if (!productRow) {
-        throw new Error(`Product not found: ${item.name}`);
-      }
-
+      if (!productRow) throw new Error(`Product not found: ${item.name}`);
       const product_id = productRow.product_id;
 
-      // Use separate sequence for individual item ID
-      const itemId = `OI-${year}-${String(nextItemNum++).padStart(3, "0")}`;
+      const orderItemId = `OI-${year}-${String(nextItemNum++).padStart(3, "0")}`;
 
       await connection.query(
         `INSERT INTO orderitem (order_item_id, order_id, product_id, quantity_ordered, price_per_unit)
          VALUES (?, ?, ?, ?, ?)`,
-        [itemId, order_id, product_id, item.quantity, item.price]
+        [orderItemId, orderId, product_id, item.quantity, item.price]
       );
+
+      // Deduct ingredients
+      const [ingredientUsages] = await connection.query(
+        `SELECT ingredient_id, quantity_used FROM productingredient WHERE product_id = ?`,
+        [product_id]
+      );
+
+      for (const usage of ingredientUsages) {
+        const totalDeduct = usage.quantity_used * item.quantity;
+        await connection.query(
+          `UPDATE ingredient SET quantity = quantity - ? WHERE ingredient_id = ?`,
+          [totalDeduct, usage.ingredient_id]
+        );
+      }
     }
 
     await connection.commit();
-    res.status(200).json({ message: "Order saved", order_id });
-  } catch (error) {
+    res.status(200).json({ message: "Order saved successfully", order_id: orderId });
+  } catch (err) {
     await connection.rollback();
-    console.error("Order insert failed:", error);
-    res.status(500).json({ error: "Insert failed", details: error.message });
+    console.error("SAVE ORDER ERROR:", err);
+    res.status(500).json({ error: "Failed to save order", details: err.message });
   } finally {
     connection.release();
   }
 });
+
 
 // GET order history by customer_id
 router.get("/history/:customer_id", async (req, res) => {
@@ -147,17 +134,18 @@ router.get("/history/:customer_id", async (req, res) => {
     const [results] = await db.query(
       `
       SELECT 
-        okb.order_id,
-        DATE_FORMAT(okb.order_date, '%Y-%m-%d') AS date,
-        'Completed' AS status,
-        GROUP_CONCAT(CONCAT(oi.quantity_ordered, 'x ', p.name, ' @ ', FORMAT(oi.quantity_ordered * oi.price_per_unit, 2)) SEPARATOR ', ') AS items,
-        okb.total_amount AS total
+        okb.order_id AS id,
+        c.customer_id, c.first_name, c.last_name,
+        GROUP_CONCAT(CONCAT(oi.quantity_ordered, 'x ', p.name) SEPARATOR ', ') AS order_name,
+        okb.order_date AS delivery_date,
+        okb.total_amount AS total,
+        'Completed' AS status
       FROM orders okb
-      JOIN orderitem oi ON okb.order_id = oi.order_id
-      JOIN product p ON oi.product_id = p.product_id
-      WHERE okb.customer_id = ?
-      GROUP BY okb.order_id, okb.order_date, okb.total_amount
-      ORDER BY okb.order_date DESC
+      JOIN customer c USING (customer_id)
+      JOIN orderitem oi USING (order_id)
+      JOIN product p USING (product_id)
+      GROUP BY okb.order_id, c.customer_id, c.first_name, c.last_name, okb.order_date, okb.total_amount
+      ORDER BY okb.order_date DESC;
       `,
       [customer_id]
     );

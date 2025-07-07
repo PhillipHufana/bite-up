@@ -114,49 +114,51 @@ function AddOrderModal({ isOpen, onClose, onAddOrder, customers }) {
     );
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const handleSubmit = async (e) => {
+      e.preventDefault();
 
-    const customer = customers.find((c) => {
-      const fullName = c.name.toLowerCase();
-      return (
-        fullName.includes(formData.firstName.toLowerCase()) &&
-        fullName.includes(formData.lastName.toLowerCase())
+      const customer = customers.find((c) => {
+        const fullName = c.name.toLowerCase();
+        return (
+          fullName.includes(formData.firstName.toLowerCase()) &&
+          fullName.includes(formData.lastName.toLowerCase())
+        );
+      });
+
+      if (!customer) {
+        alert("Customer not found! Please add them to the Customer Profile.");
+        return;
+      }
+
+      const validItems = orderItems.filter(
+        (i) =>
+          i.name &&
+          i.quantity > 0 &&
+          products.some((p) => p.name.toLowerCase() === i.name.toLowerCase())
       );
-    });
 
-    if (!customer) {
-      alert("Customer not found! Please add them to the Customer Profile.");
-      return;
-    }
+      if (validItems.length === 0) {
+        alert("Please add valid products that exist in the system.");
+        return; 
+      }
 
-    const validItems = orderItems.filter(
-      (i) =>
-        i.name &&
-        i.quantity > 0 &&
-        products.some((p) => p.name.toLowerCase() === i.name.toLowerCase())
-    );
+      try {
+        const payload = {
+          customer_id: customer.id,
+          orderItems: validItems,
+          total_amount: calculateTotal(),
+          order_date: formData.orderDate,
+        };
+        await axios.post("/api/orders", payload);
 
-    if (validItems.length === 0) {
-      alert("Please add valid products that exist in the system.");
-      return;
-    }
-
-    try {
-      const payload = {
-        customer_id: customer.id,
-        orderItems: validItems,
-        total_amount: calculateTotal(),
-        order_date: formData.orderDate,
-      };
-      await axios.post("/api/orders", payload);
-      onAddOrder();
-      onClose();
-    } catch (err) {
-      console.error("Order submission failed:", err);
-      alert("Failed to save order.");
-    }
-  };
+        alert("Order saved and ingredients deducted!");
+        onAddOrder?.();
+        onClose();
+      } catch (err) {
+        console.error("Order failed:", err.response?.data || err.message);
+        alert("Failed to save order.");
+      }
+    };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -331,12 +333,12 @@ function AddOrderModal({ isOpen, onClose, onAddOrder, customers }) {
           </div>
 
           <div className="flex justify-end pt-4">
-            <Button
+            <button
               type="submit"
               className="bg-[#1F9254] hover:bg-green-700 text-white px-8 py-2 rounded-full font-poppins"
             >
               SAVE ORDER
-            </Button>
+            </button>
           </div>
         </form>
       </DialogContent>
