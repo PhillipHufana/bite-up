@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import axios from "axios"
-import { ChevronLeft, ChevronRight, Calculator, Package, TrendingUp, BarChart3, Plus, X, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calculator, Package, TrendingUp, BarChart3, Plus, X, Trash2, Cookie } from "lucide-react"
 import Navbar from "../components/navbar"
 
 const CostingCalculator = () => {
@@ -258,7 +258,7 @@ const CostingCalculator = () => {
                   </div>
                   <button
                     onClick={closeModal}
-                    className="p-2 hover:text-gray-300 rounded-lg transition-colors cursor-pointer"
+                    className="p-2 hover:bg-gray-100 hover:rounded-2xl hover:text-amber-600 cursor-pointer"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -282,7 +282,7 @@ const CostingCalculator = () => {
                 {/* Add Ingredient Section */}
                 <div className="bg-gray-50 rounded-xl p-5 mt-[-23px]">
                   <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <Package className="w-5 h-5 mr-2 text-amber-600" />
+                    <Cookie className="w-5 h-5 mr-2 text-amber-600" />
                     Add Ingredients
                   </h3>
 
