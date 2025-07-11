@@ -24,7 +24,6 @@ const [sharedPurchaseDate, setSharedPurchaseDate] = useState(() => {
     .slice(0, 10);
   return today;
 });
-
 const [showLowStockModal, setShowLowStockModal] = useState(false);
 
 const normalizedDate = editData.purchase_date?.split("T")[0] || null;
@@ -223,9 +222,8 @@ const handleEditClick = (item) => {
   setEditData({
     ...item,
     purchase_date: new Date(item.purchase_date).toLocaleDateString("sv-SE"),
-
+    low_stock_threshold: item.low_stock_threshold ?? 0.2, // ✅ Add this line
   });
-
 };
 
 
@@ -245,6 +243,7 @@ const handleEditClick = (item) => {
       quantity: parseFloat(editData.quantity),
       cost_per_unit: parseFloat(editData.cost_per_unit),
       purchase_date: normalizedDate,
+      low_stock_threshold: editData.low_stock_threshold ?? 0.2, 
     });
 
     if (parseFloat(editData.quantity) === 0) {
@@ -357,6 +356,9 @@ const formatDate = (isoString) => {
           price: Number.parseFloat(item.unitPrice),
           cost_per_unit: 0,
           to_grams: toGrams,
+          low_stock_threshold: item.low_stock_threshold
+            ? Number(item.low_stock_threshold)
+            : null
         };
       }),
     });
@@ -377,6 +379,7 @@ const formatDate = (isoString) => {
         unitPrice: "",
         quantity: "",
         to_grams: "",
+        low_stock_threshold: "", // <-- fix here
       },
     ]);
 
@@ -402,12 +405,16 @@ const formatDate = (isoString) => {
     }));
   };
 //for the low stock count
+
+
 const flatIngredients = Object.values(groupedData).flat();
 const lowStockCount = flatIngredients.filter(
   item =>
     item.initial_quantity &&
-    item.quantity / item.initial_quantity <= 0.2
+    item.quantity <= item.initial_quantity * (item.low_stock_threshold ?? 0.2)
 ).length;
+
+
 
 
   const getBrandsByCategoryAndItem = (category, itemName) => {
@@ -485,7 +492,7 @@ const lowStockCount = flatIngredients.filter(
                     .filter(
                       (item) =>
                         item.initial_quantity &&
-                        item.quantity / item.initial_quantity <= 0.2
+                        item.quantity <= item.initial_quantity * (item.low_stock_threshold ?? 0.2)
                     )
                     .map((item) => (
                       <tr
@@ -561,6 +568,9 @@ const lowStockCount = flatIngredients.filter(
                                 Qty
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
+                                Stock Threshold
+                              </th>
+                              <th className="px-4 py-3 text-left font-semibold">
                                 Unit
                               </th>
                               <th className="px-4 py-3 text-left font-semibold">
@@ -592,7 +602,7 @@ const lowStockCount = flatIngredients.filter(
                                       ${highlightedRowId.includes(item.ingredient_id) ? "bg-yellow-200" : ""}
                                       ${
                                         item.initial_quantity &&
-                                        item.quantity / item.initial_quantity <= 0.2
+                                        item.quantity / item.initial_quantity <= (item.low_stock_threshold ?? 0.2)
                                           ? ""
                                           : ""
                                       }
@@ -631,16 +641,40 @@ const lowStockCount = flatIngredients.filter(
                                         type="number"
                                         className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
                                       />
-                                    ) : (
+                                    ) : ( 
                                       <>
                                         {item.quantity}
-                                        {item.initial_quantity && item.quantity / item.initial_quantity <= 0.2 && (
+                                        {item.initial_quantity && item.quantity / item.initial_quantity <= (item.low_stock_threshold ?? 0.2) && (
                                           <span className="ml-2 text-red-600 font-semibold text-sm">(Low)</span>
                                         )}
                                       </>
                                     )}
                                   </td>
-
+                                 <td className="px-4 py-3">
+                                    {isEditing ? (
+                                      <input
+                                        name="low_stock_threshold"
+                                        value={
+                                          editData.low_stock_threshold !== undefined
+                                            ? (editData.low_stock_threshold * 100).toFixed(0)
+                                            : ""
+                                        }
+                                        onChange={(e) =>
+                                          setEditData((prev) => ({
+                                            ...prev,
+                                            low_stock_threshold: Number(e.target.value) / 100,
+                                          }))
+                                        }
+                                        type="number"
+                                        step="1"
+                                        min="0"
+                                        max="100"
+                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                                      />
+                                    ) : (
+                                      `${(item.low_stock_threshold ?? 0.2) * 100}%`
+                                    )}
+                                  </td>
                                   {/* Unit - will always be 'gr' now */}
                                   <td className="px-4 py-3">
                                     {isEditing ? (
@@ -975,8 +1009,28 @@ const lowStockCount = flatIngredients.filter(
                           step="0.01"
                         />
                       </div>
-
-
+                     {/* Low Stock Threshold (Percentage) */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-amber-800 mb-2">
+                          Low Stock Threshold (%) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={
+                            item.low_stock_threshold !== undefined
+                              ? (item.low_stock_threshold * 100).toFixed(0)
+                              : "20"
+                          }
+                          onChange={(e) =>
+                            updateFormItem(index, "low_stock_threshold", e.target.value / 100)
+                          }
+                          className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
+                          min="0"
+                          max="100"
+                          step="1"
+                          placeholder="e.g. 20 for 20%"
+                        />
+                      </div>
                       {/* Unit */}
                       <div className="space-y-2">
                         <label className="block text-sm font-semibold text-amber-800 mb-2">
@@ -1025,13 +1079,13 @@ const lowStockCount = flatIngredients.filter(
                               ? "N/A"
                               : "Enter grams per ml or pc"
                           }
-                          className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
+                          className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium"
                         />
                       </div>
 
 
                       {/* Unit Price */}
-                      <div className="space-y-2">
+                        <div className="space-y-2">
                         <label className="block text-sm font-semibold text-amber-800 mb-2">
                           Unit Price (₱) <span className="text-red-500">*</span>
                         </label>

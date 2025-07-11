@@ -10,7 +10,7 @@ router.get("/", async (req, res) => {
       SELECT 
       ingredient_id, name, category, brand, unit, price, 
       quantity, initial_quantity, cost_per_unit, purchase_date,
-      to_grams
+      to_grams, low_stock_threshold
     FROM ingredient
     `);
     res.json(results);
@@ -19,7 +19,6 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // POST /api/ingredient/bulk
 router.post("/bulk", async (req, res) => {
@@ -84,7 +83,8 @@ router.post("/bulk", async (req, res) => {
         unit,
         price,
         quantity,
-        to_grams
+        to_grams,
+        low_stock_threshold = 0.2
       } = item;
 
       if (!name || !category || price == null || quantity == null) continue;
@@ -148,9 +148,9 @@ router.post("/bulk", async (req, res) => {
 
         await db.query(
           `UPDATE ingredient 
-           SET price = ?, quantity = ?, cost_per_unit = ?, unit = ?, brand = ?, to_grams = ?
+           SET price = ?, quantity = ?, cost_per_unit = ?, unit = ?, brand = ?, to_grams = ?, low_stock_threshold = ?
            WHERE ingredient_id = ?`,
-          [updatedPrice, updatedQuantity, costPerUnit, normalizedUnit, brand, toGramsValue, existing.ingredient_id]
+          [updatedPrice, updatedQuantity, costPerUnit, normalizedUnit, brand, toGramsValue, low_stock_threshold, existing.ingredient_id]
         );
 
         ingredientId = existing.ingredient_id;
@@ -159,9 +159,9 @@ router.post("/bulk", async (req, res) => {
         ingredientId = await generateNextId();
         await db.query(
           `INSERT INTO ingredient 
-          (ingredient_id, name, category, brand, unit, price, quantity, initial_quantity, cost_per_unit, purchase_date, to_grams)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [ingredientId, name, category, brand, normalizedUnit, parsedPrice, finalQuantity, finalQuantity, costPerUnit, purchase_date, toGramsValue]
+          (ingredient_id, name, category, brand, unit, price, quantity, initial_quantity, cost_per_unit, purchase_date, to_grams, low_stock_threshold)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [ingredientId, name, category, brand, normalizedUnit, parsedPrice, finalQuantity, finalQuantity, costPerUnit, purchase_date, toGramsValue, low_stock_threshold]
         );
         updatedIds.push(ingredientId);
 
@@ -214,12 +214,13 @@ router.put("/:id", async (req, res) => {
     quantity,
     cost_per_unit,
     purchase_date,
+    low_stock_threshold = 0.2
   } = req.body;
 
   try {
     await db.query(
       `UPDATE ingredient 
-       SET name = ?, brand = ?, unit = ?, price = ?, quantity = ?, cost_per_unit = ?, purchase_date = ?
+       SET name = ?, brand = ?, unit = ?, price = ?, quantity = ?, cost_per_unit = ?, purchase_date = ?, low_stock_threshold = ?
        WHERE ingredient_id = ?`,
       [
         name,
@@ -229,7 +230,8 @@ router.put("/:id", async (req, res) => {
         parseFloat(quantity),
         parseFloat(cost_per_unit),
         purchase_date,
-        id,
+        low_stock_threshold,
+        id
       ]
     );
 
@@ -262,16 +264,16 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// GET ingredients with ≤ 20% remaining quantity
+// GET ingredients with ≤ threshold remaining quantity
 router.get("/low-stock", async (req, res) => {
   try {
     const [results] = await db.query(`
       SELECT 
         ingredient_id, name, category, brand, unit, price, 
         quantity, initial_quantity, cost_per_unit, purchase_date,
-        to_grams             
+        to_grams, low_stock_threshold             
       FROM ingredient
-      WHERE quantity <= initial_quantity * 0.2
+      WHERE quantity <= initial_quantity * COALESCE(low_stock_threshold, 0.2)
     `);
     res.json(results);
   } catch (err) {
@@ -279,6 +281,5 @@ router.get("/low-stock", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 export default router;
