@@ -1,6 +1,8 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import axios from "axios"
-import { ChevronLeft, ChevronRight, Calculator, Package, TrendingUp, BarChart3 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calculator, Package, TrendingUp, BarChart3, Plus, X, Trash2 } from "lucide-react"
 import Navbar from "../components/navbar"
 
 const CostingCalculator = () => {
@@ -11,6 +13,16 @@ const CostingCalculator = () => {
   const [desiredPortions, setDesiredPortions] = useState(1)
   const [ingredients, setIngredients] = useState([])
 
+  // Modal and form states
+  const [showAddProductModal, setShowAddProductModal] = useState(false)
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    ingredients: [],
+  })
+  const [currentIngredient, setCurrentIngredient] = useState({
+    name: "",
+    quantity: "",
+  })
 
   // Fetch products from backend
   useEffect(() => {
@@ -30,38 +42,107 @@ const CostingCalculator = () => {
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
-        const selected = products[selectedProduct];
-        if (!selected) return;
-
-        const res = await axios.get(`/api/catalog/${selected.id}`);
-        setCurrentProduct(selected); // Only product info
-        setIngredients(Array.isArray(res.data) ? res.data : []);
+        const selected = products[selectedProduct]
+        if (!selected) return
+        const res = await axios.get(`/api/catalog/${selected.id}`)
+        setCurrentProduct(selected)
+        setIngredients(Array.isArray(res.data) ? res.data : [])
       } catch (err) {
-        console.error("Error fetching product details:", err);
-        setIngredients([]);
+        console.error("Error fetching product details:", err)
+        setIngredients([])
       }
-    };
-    fetchProductDetails();
-  }, [selectedProduct, products]);
+    }
+    fetchProductDetails()
+  }, [selectedProduct, products])
 
   const handlePortionsChange = (e) => {
     const value = Number.parseInt(e.target.value) || 1
     setDesiredPortions(value)
   }
 
+  // Add ingredient to new product
+  const addIngredientToProduct = () => {
+    if (!currentIngredient.name.trim() || !currentIngredient.quantity) {
+      alert("Please fill in both ingredient name and quantity")
+      return
+    }
+
+    const ingredient = {
+      name: currentIngredient.name.trim(),
+      quantity: Number.parseFloat(currentIngredient.quantity),
+      unit: "grams", // Default unit
+      brand: "", // Default empty brand
+      cost: 1, // Default cost for calculations
+    }
+
+    setNewProduct((prev) => ({
+      ...prev,
+      ingredients: [...prev.ingredients, ingredient],
+    }))
+
+    // Reset current ingredient form
+    setCurrentIngredient({
+      name: "",
+      quantity: "",
+    })
+  }
+
+  // Remove ingredient from new product
+  const removeIngredientFromProduct = (index) => {
+    setNewProduct((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, i) => i !== index),
+    }))
+  }
+
+  // Handle form submission
+  const handleAddProduct = async () => {
+    if (!newProduct.name.trim()) {
+      alert("Please provide a product name")
+      return
+    }
+
+    if (newProduct.ingredients.length === 0) {
+      alert("Please add at least one ingredient")
+      return
+    }
+
+    try {
+      const newProductData = {
+        id: Date.now(),
+        name: newProduct.name.trim(),
+        ingredients: newProduct.ingredients,
+      }
+
+      setProducts((prev) => [...prev, newProductData])
+      setNewProduct({ name: "", ingredients: [] })
+      setShowAddProductModal(false)
+      setSelectedProduct(products.length)
+
+      alert("Product added successfully!")
+    } catch (err) {
+      console.error("Error adding product:", err)
+      alert("Error adding product. Please try again.")
+    }
+  }
+
+  // Close modal and reset form
+  const closeModal = () => {
+    setShowAddProductModal(false)
+    setNewProduct({ name: "", ingredients: [] })
+    setCurrentIngredient({ name: "", quantity: "" })
+  }
+
   // Core calculations
-  const weightPerPortion = ingredients.reduce((sum, ing) => sum + ing.quantity, 0); //Sum of all ingredient weights needed for just one portion
-  const totalWeight = weightPerPortion * desiredPortions;
-  const ingredientWeightPerPortion = weightPerPortion;
-
-  const totalCostIngredients = ingredients.reduce((sum, ing) => sum + ing.quantity * ing.cost * desiredPortions, 0) || 0;
-  const costPerPortion = totalCostIngredients / desiredPortions;
-  
-  const suggestedSellingPrice = Math.ceil(costPerPortion * 3);
-  const totalSales = suggestedSellingPrice * desiredPortions;
-  const foodCostPercentage = Math.round((costPerPortion / suggestedSellingPrice) * 100);
-  const overheadExpense = totalSales * 0.4;
-
+  const weightPerPortion = ingredients.reduce((sum, ing) => sum + ing.quantity, 0)
+  const totalWeight = weightPerPortion * desiredPortions
+  const ingredientWeightPerPortion = weightPerPortion
+  const totalCostIngredients = ingredients.reduce((sum, ing) => sum + ing.quantity * ing.cost * desiredPortions, 0) || 0
+  const costPerPortion = totalCostIngredients / desiredPortions
+  const suggestedSellingPrice = Math.ceil(costPerPortion * 3)
+  const totalSales = suggestedSellingPrice * desiredPortions
+  const foodCostPercentage = Math.round((costPerPortion / suggestedSellingPrice) * 100)
+  const overheadExpense = totalSales * 0.4
 
   // Metric Card Component
   const MetricCard = ({ label, value, color = "amber", prefix = "", suffix = "" }) => (
@@ -91,7 +172,6 @@ const CostingCalculator = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
       <Navbar activeTab="COSTING" />
-
       <div className="flex h-[calc(100vh-80px)]">
         {/* Sidebar */}
         <div
@@ -111,11 +191,24 @@ const CostingCalculator = () => {
             )}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-2 rounded-lg hover:bg-amber-200 text-amber-700 transition-all duration-200 hover:scale-105"
+              className="p-2 rounded-lg hover:bg-amber-200 text-amber-700 transition-all duration-200 hover:scale-105 cursor-pointer"
             >
               {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
             </button>
           </div>
+
+          {/* Add New Product Button */}
+          {!sidebarCollapsed && (
+            <div className="p-4">
+              <button
+                onClick={() => setShowAddProductModal(true)}
+                className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 py-3 rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-200 hover:scale-105 shadow-lg font-medium cursor-pointer"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Add New Product</span>
+              </button>
+            </div>
+          )}
 
           {/* Product List */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -150,10 +243,138 @@ const CostingCalculator = () => {
           </div>
         </div>
 
+        {/* Add Product Modal */}
+        {showAddProductModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden">
+              {/* Modal Header - Fixed */}
+              <div className="bg-amber-700 px-6 py-4 text-white flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-opacity-20 rounded-lg flex items-center justify-center">
+                      <Plus className="w-5 h-5" />
+                    </div>
+                    <h2 className="text-xl font-semibold">Add New Product</h2>
+                  </div>
+                  <button
+                    onClick={closeModal}
+                    className="p-2 hover:text-gray-300 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Product Name */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Product Name</label>
+                  <input
+                    type="text"
+                    value={newProduct.name}
+                    onChange={(e) => setNewProduct((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-400 hover:border-gray-300"
+                    placeholder="Enter product name..."
+                  />
+                </div>
+
+                {/* Add Ingredient Section */}
+                <div className="bg-gray-50 rounded-xl p-5 mt-[-23px]">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <Package className="w-5 h-5 mr-2 text-amber-600" />
+                    Add Ingredients
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2 mt-[10px]">
+                      <label className="block text-sm font-medium text-gray-700">Ingredient Name</label>
+                      <input
+                        type="text"
+                        value={currentIngredient.name}
+                        onChange={(e) => setCurrentIngredient((prev) => ({ ...prev, name: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 hover:border-gray-300"
+                        placeholder="e.g., Flour, Sugar, Eggs..."
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Quantity (grams)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={currentIngredient.quantity}
+                        onChange={(e) => setCurrentIngredient((prev) => ({ ...prev, quantity: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 hover:border-gray-300"
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <button
+                      onClick={addIngredientToProduct}
+                      className="w-full bg-amber-600 text-white px-4 py-3 rounded-xl hover:bg-amber-700 transition-all duration-200 flex items-center justify-center space-x-2 font-medium shadow-md hover:shadow-lg cursor-pointer active:scale-95"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Ingredient</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Ingredients List */}
+                {newProduct.ingredients.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-800 flex items-center justify-between">
+                      <span>Added Ingredients</span>
+                      <span className="text-sm font-normal text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                        {newProduct.ingredients.length} ingredient{newProduct.ingredients.length !== 1 ? "s" : ""}
+                      </span>
+                    </h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                      {newProduct.ingredients.map((ingredient, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between bg-white border-2 border-gray-100 p-4 rounded-xl hover:border-amber-200 hover:shadow-sm transition-all duration-200"
+                        >
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900">{ingredient.name}</div>
+                            <div className="text-sm text-gray-600">{ingredient.quantity} grams</div>
+                          </div>
+                          <button
+                            onClick={() => removeIngredientFromProduct(index)}
+                            className="p-2 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200 cursor-pointer active:scale-95"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer - Fixed */}
+              <div className="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 flex-shrink-0 border-t border-gray-200">
+                <button
+                  onClick={closeModal}
+                  className="px-6 py-2 text-gray-700 border-2 border-gray-200 rounded-xl hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 font-medium cursor-pointer active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddProduct}
+                  className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-200 font-medium shadow-md hover:shadow-lg cursor-pointer active:scale-95"
+                >
+                  Add Product
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Mobile Overlay */}
         {!sidebarCollapsed && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden cursor-pointer"
             onClick={() => setSidebarCollapsed(true)}
           />
         )}
@@ -169,7 +390,7 @@ const CostingCalculator = () => {
                   {currentProduct.name}
                 </h1>
               </div>
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-[Poppins] font-bold text-gray-800 bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-[Poppins] font-bold text-amber-700 bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text">
                 Food Costing Calculator
               </h2>
             </div>
@@ -186,7 +407,7 @@ const CostingCalculator = () => {
                     value={desiredPortions}
                     onChange={handlePortionsChange}
                     min="1"
-                    className="w-full px-4 py-3 text-center text-xl sm:text-2xl font-bold text-amber-900 bg-amber-50 border-2 border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-3 text-center text-xl sm:text-2xl font-bold text-amber-900 bg-amber-50 border-2 border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 cursor-pointer"
                     placeholder="Enter portions"
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -205,10 +426,14 @@ const CostingCalculator = () => {
                   <h3 className="text-lg font-semibold text-amber-900">Production Details</h3>
                   <BarChart3 className="w-5 h-5 text-amber-600 ml-auto" />
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <MetricCard label="Total Ingredient Weight (Grams)" value={totalWeight} color="blue" suffix="g" />
-                  <MetricCard label="Ingredient Weight per Portion" value={ingredientWeightPerPortion} color="blue" suffix="g" />
+                  <MetricCard
+                    label="Ingredient Weight per Portion"
+                    value={ingredientWeightPerPortion}
+                    color="blue"
+                    suffix="g"
+                  />
                   <MetricCard
                     label="Suggested Price per Portion"
                     value={suggestedSellingPrice}
@@ -226,7 +451,6 @@ const CostingCalculator = () => {
                   <h3 className="text-lg font-semibold text-amber-900">Cost Analysis</h3>
                   <TrendingUp className="w-5 h-5 text-green-600 ml-auto" />
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <MetricCard label="Total Ingredient Cost" value={totalCostIngredients} color="red" prefix="₱" />
                   <MetricCard label="Cost of Ingredient per Portion" value={costPerPortion} color="red" prefix="₱" />
@@ -244,12 +468,9 @@ const CostingCalculator = () => {
                     <Package className="w-5 h-5 mr-2" />
                     Ingredients Breakdown
                   </h3>
-                  <span className="text-sm text-amber-700 font-medium">
-                    {ingredients.length} ingredients
-                  </span>
+                  <span className="text-sm text-amber-700 font-medium">{ingredients.length} ingredients</span>
                 </div>
               </div>
-
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
@@ -319,4 +540,3 @@ const CostingCalculator = () => {
 }
 
 export default CostingCalculator
-
