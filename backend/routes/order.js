@@ -55,35 +55,39 @@ router.post("/", async (req, res) => {
     await connection.beginTransaction();
     const year = new Date().getFullYear();
 
-    // Generate next ORDER ID
+    // Generate ORDER ID
     const [[lastOrder]] = await connection.query(`
       SELECT order_id FROM orders
       WHERE order_id LIKE 'ORD-${year}-%'
       ORDER BY order_id DESC LIMIT 1
     `);
-    let nextOrderNum = lastOrder
+
+    const nextOrderNum = lastOrder
       ? parseInt(lastOrder.order_id.split("-")[2]) + 1
       : 1;
+
     const orderId = `ORD-${year}-${String(nextOrderNum).padStart(3, "0")}`;
 
-    // Create ORDER first
+    // Insert into orders
     await connection.query(
       `INSERT INTO orders (order_id, customer_id, order_date, total_amount)
        VALUES (?, ?, ?, ?)`,
       [orderId, customer_id, order_date || new Date(), total_amount || 0]
     );
 
-    // Generate next order_item_id
+    // Generate ORDER ITEM ID
     const [[lastItem]] = await connection.query(`
       SELECT order_item_id FROM orderitem
       WHERE order_item_id LIKE 'OI-${year}-%'
       ORDER BY order_item_id DESC LIMIT 1
     `);
+
     let nextItemNum = lastItem
       ? parseInt(lastItem.order_item_id.split("-")[2]) + 1
       : 1;
 
     for (const item of orderItems) {
+      // Get product ID by name
       const [[productRow]] = await connection.query(
         `SELECT product_id FROM product WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1`,
         [item.name]
@@ -99,23 +103,66 @@ router.post("/", async (req, res) => {
         [orderItemId, orderId, product_id, item.quantity, item.price]
       );
 
-      // Deduct ingredients
+      // Get all required ingredients for this product
       const [ingredientUsages] = await connection.query(
-        `SELECT ingredient_id, quantity_used FROM productingredient WHERE product_id = ?`,
+        `SELECT ingredients AS name, quantity_needed, unit
+         FROM productingredient 
+         WHERE product_id = ?`,
         [product_id]
       );
 
       for (const usage of ingredientUsages) {
-        const totalDeduct = usage.quantity_used * item.quantity;
-        await connection.query(
-          `UPDATE ingredient SET quantity = quantity - ? WHERE ingredient_id = ?`,
-          [totalDeduct, usage.ingredient_id]
+      const totalToDeduct = usage.quantity_needed * item.quantity;
+
+      // Match ingredient rows by cleaned name (brand is ignored)
+        const IGNORE_WORDS = ["light", "dark", "pure", "fresh", "organic", "refined", "powder", "ground"];
+        const keywords = usage.name
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((word) => word && !IGNORE_WORDS.includes(word));
+
+        let nameConditions = keywords.map(() => `LOWER(name) LIKE ?`).join(" AND ");
+        let values = keywords.map((word) => `%${word}%`);
+
+        const [matchingIngredients] = await connection.query(
+          `SELECT ingredient_id, quantity
+           FROM ingredient
+           WHERE ${nameConditions}
+           ORDER BY purchase_date ASC`,
+          values
         );
+
+        // Deduct from matching rows progressively
+        let remainingToDeduct = totalToDeduct;
+
+        for (const row of matchingIngredients) {
+          if (remainingToDeduct <= 0) break;
+
+          const deductAmount = Math.min(row.quantity, remainingToDeduct);
+
+          await connection.query(
+            `UPDATE ingredient
+             SET quantity = quantity - ?
+             WHERE ingredient_id = ?`,
+            [deductAmount, row.ingredient_id]
+          );
+
+          remainingToDeduct -= deductAmount;
+        }
+
+        // If still not enough, throw an error
+        if (remainingToDeduct > 0) {
+          console.warn("No enough inventory for:", usage.name);
+          console.warn("Keywords used:", keywords);
+          console.warn("Matching rows:", matchingIngredients);
+          throw new Error(`Not enough inventory for ingredient: ${usage.name}`);
+        }
       }
     }
 
     await connection.commit();
     res.status(200).json({ message: "Order saved successfully", order_id: orderId });
+
   } catch (err) {
     await connection.rollback();
     console.error("SAVE ORDER ERROR:", err);
