@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { ChevronLeft, ChevronRight, Calculator, Package, TrendingUp, BarChart3 } from "lucide-react"
@@ -11,6 +9,8 @@ const CostingCalculator = () => {
   const [products, setProducts] = useState([])
   const [currentProduct, setCurrentProduct] = useState(null)
   const [desiredPortions, setDesiredPortions] = useState(1)
+  const [ingredients, setIngredients] = useState([])
+
 
   // Fetch products from backend
   useEffect(() => {
@@ -30,23 +30,19 @@ const CostingCalculator = () => {
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
-        const selected = products[selectedProduct]
-        if (!selected) return
-        const res = await axios.get(`/api/catalog/${selected.id}`)
-        setCurrentProduct({
-          ...selected,
-          ingredients: Array.isArray(res.data) ? res.data : [],
-        })
+        const selected = products[selectedProduct];
+        if (!selected) return;
+
+        const res = await axios.get(`/api/catalog/${selected.id}`);
+        setCurrentProduct(selected); // Only product info
+        setIngredients(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error("Error fetching product details:", err)
-        setCurrentProduct({
-          ...products[selectedProduct],
-          ingredients: [],
-        })
+        console.error("Error fetching product details:", err);
+        setIngredients([]);
       }
-    }
-    fetchProductDetails()
-  }, [selectedProduct, products])
+    };
+    fetchProductDetails();
+  }, [selectedProduct, products]);
 
   const handlePortionsChange = (e) => {
     const value = Number.parseInt(e.target.value) || 1
@@ -54,16 +50,18 @@ const CostingCalculator = () => {
   }
 
   // Core calculations
-  const totalWeight = currentProduct?.ingredients?.reduce((sum, ing) => sum + ing.quantity * desiredPortions, 0) || 0
+  const weightPerPortion = ingredients.reduce((sum, ing) => sum + ing.quantity, 0); //Sum of all ingredient weights needed for just one portion
+  const totalWeight = weightPerPortion * desiredPortions;
+  const ingredientWeightPerPortion = weightPerPortion;
 
-  const totalCostIngredients = currentProduct?.ingredients?.reduce((sum, ing) => sum + ing.quantity * ing.cost * desiredPortions, 0) || 0
+  const totalCostIngredients = ingredients.reduce((sum, ing) => sum + ing.quantity * ing.cost * desiredPortions, 0) || 0;
+  const costPerPortion = totalCostIngredients / desiredPortions;
+  
+  const suggestedSellingPrice = Math.ceil(costPerPortion * 3);
+  const totalSales = suggestedSellingPrice * desiredPortions;
+  const foodCostPercentage = Math.round((costPerPortion / suggestedSellingPrice) * 100);
+  const overheadExpense = totalSales * 0.4;
 
-  const costPerPortion = totalCostIngredients / desiredPortions
-  const ingredientWeightPerPortion = totalWeight / desiredPortions
-  const suggestedSellingPrice = Math.ceil(costPerPortion * 3)
-  const totalSales = suggestedSellingPrice * desiredPortions
-  const foodCostPercentage = Math.round((costPerPortion / suggestedSellingPrice) * 100)
-  const overheadExpense = totalSales * 0.4
 
   // Metric Card Component
   const MetricCard = ({ label, value, color = "amber", prefix = "", suffix = "" }) => (
@@ -79,7 +77,7 @@ const CostingCalculator = () => {
     </div>
   )
 
-  if (!currentProduct || !currentProduct.ingredients) {
+  if (!currentProduct || !currentProduct.ingredients === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
         <div className="text-center">
@@ -209,7 +207,7 @@ const CostingCalculator = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <MetricCard label="Total IngredientWeight (Grams)" value={totalWeight} color="blue" suffix="g" />
+                  <MetricCard label="Total Ingredient Weight (Grams)" value={totalWeight} color="blue" suffix="g" />
                   <MetricCard label="Ingredient Weight per Portion" value={ingredientWeightPerPortion} color="blue" suffix="g" />
                   <MetricCard
                     label="Suggested Price per Portion"
@@ -247,7 +245,7 @@ const CostingCalculator = () => {
                     Ingredients Breakdown
                   </h3>
                   <span className="text-sm text-amber-700 font-medium">
-                    {currentProduct.ingredients.length} ingredients
+                    {ingredients.length} ingredients
                   </span>
                 </div>
               </div>
@@ -263,10 +261,10 @@ const CostingCalculator = () => {
                         Brand
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
-                        Unit
+                        Quantity
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
-                        Quantity
+                        Unit
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
                         Total Cost
@@ -274,7 +272,7 @@ const CostingCalculator = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {currentProduct.ingredients.map((ing, index) => (
+                    {ingredients.map((ing, index) => (
                       <tr key={index} className="hover:bg-amber-50 transition-colors duration-150">
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="font-medium text-gray-900">{ing.name}</div>
@@ -283,14 +281,14 @@ const CostingCalculator = () => {
                           <div className="text-sm text-gray-600">{ing.brand}</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-center">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            {ing.unit}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-center">
                           <div className="text-sm font-medium text-gray-900">
                             {(ing.quantity * desiredPortions).toFixed(2)}
                           </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            {ing.unit}
+                          </span>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right">
                           <div className="text-sm font-bold text-green-600">
@@ -321,3 +319,4 @@ const CostingCalculator = () => {
 }
 
 export default CostingCalculator
+

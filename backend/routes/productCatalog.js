@@ -9,7 +9,7 @@ router.get("/", async (req, res) => {
     SELECT 
       p.product_id AS id,
       p.name,
-      SUM(pi.quantity_used * i.cost_per_unit) AS totalCostIngredients
+      SUM(pi.quantity_needed * i.cost_per_unit) AS totalCostIngredients
     FROM product p
     JOIN productingredient pi ON p.product_id = pi.product_id
     JOIN ingredient i ON pi.ingredient_id = i.ingredient_id
@@ -38,9 +38,8 @@ router.get("/:id", async (req, res) => {
     SELECT 
       i.name, 
       i.brand, 
-      i.unit, 
-      CAST(pi.quantity_used AS FLOAT) AS quantity, 
-      CAST(i.quantity AS FLOAT) AS grams,
+      pi.unit,
+      CAST(pi.quantity_needed AS FLOAT) AS quantity,
       CAST(i.cost_per_unit AS FLOAT) AS cost
     FROM productingredient pi
     JOIN ingredient i ON pi.ingredient_id = i.ingredient_id
@@ -54,6 +53,7 @@ router.get("/:id", async (req, res) => {
     res.status(500).json([]);
   }
 });
+
 
 
 export default router;
