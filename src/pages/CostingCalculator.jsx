@@ -1,8 +1,19 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
-import { ChevronLeft, ChevronRight, Calculator, Package, TrendingUp, BarChart3, Plus, X, Trash2, Cookie } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calculator,
+  Package,
+  TrendingUp,
+  BarChart3,
+  Plus,
+  X,
+  Trash2,
+  Cookie,
+  Edit,
+  Save,
+} from "lucide-react"
 import Navbar from "../components/navbar"
 
 const CostingCalculator = () => {
@@ -23,6 +34,18 @@ const CostingCalculator = () => {
     name: "",
     quantity: "",
   })
+
+  // Edit ingredient modal states
+  const [showEditIngredientModal, setShowEditIngredientModal] = useState(false)
+  const [editingIngredient, setEditingIngredient] = useState(null)
+  const [editIngredientForm, setEditIngredientForm] = useState({
+    name: "",
+    quantity: "",
+    brand: "",
+    unit: "",
+    cost: "",
+  })
+  const [isAddingNewIngredient, setIsAddingNewIngredient] = useState(false)
 
   // Fetch products from backend
   useEffect(() => {
@@ -66,7 +89,6 @@ const CostingCalculator = () => {
       alert("Please fill in both ingredient name and quantity")
       return
     }
-
     const ingredient = {
       name: currentIngredient.name.trim(),
       quantity: Number.parseFloat(currentIngredient.quantity),
@@ -74,12 +96,10 @@ const CostingCalculator = () => {
       brand: "", // Default empty brand
       cost: 1, // Default cost for calculations
     }
-
     setNewProduct((prev) => ({
       ...prev,
       ingredients: [...prev.ingredients, ingredient],
     }))
-
     // Reset current ingredient form
     setCurrentIngredient({
       name: "",
@@ -101,24 +121,20 @@ const CostingCalculator = () => {
       alert("Please provide a product name")
       return
     }
-
     if (newProduct.ingredients.length === 0) {
       alert("Please add at least one ingredient")
       return
     }
-
     try {
       const newProductData = {
         id: Date.now(),
         name: newProduct.name.trim(),
         ingredients: newProduct.ingredients,
       }
-
       setProducts((prev) => [...prev, newProductData])
       setNewProduct({ name: "", ingredients: [] })
       setShowAddProductModal(false)
       setSelectedProduct(products.length)
-
       alert("Product added successfully!")
     } catch (err) {
       console.error("Error adding product:", err)
@@ -131,6 +147,84 @@ const CostingCalculator = () => {
     setShowAddProductModal(false)
     setNewProduct({ name: "", ingredients: [] })
     setCurrentIngredient({ name: "", quantity: "" })
+  }
+
+  // Edit ingredient functions
+  const openEditIngredientModal = (ingredient, index) => {
+    setEditingIngredient(index)
+    setEditIngredientForm({
+      name: ingredient.name,
+      quantity: ingredient.quantity.toString(),
+      brand: ingredient.brand || "",
+      unit: ingredient.unit || "grams",
+      cost: ingredient.cost?.toString() || "1",
+    })
+    setIsAddingNewIngredient(false)
+    setShowEditIngredientModal(true)
+  }
+
+  const openAddIngredientModal = () => {
+    setEditingIngredient(null)
+    setEditIngredientForm({
+      name: "",
+      quantity: "",
+      brand: "",
+      unit: "grams",
+      cost: "1",
+    })
+    setIsAddingNewIngredient(true)
+    setShowEditIngredientModal(true)
+  }
+
+  const closeEditIngredientModal = () => {
+    setShowEditIngredientModal(false)
+    setEditingIngredient(null)
+    setEditIngredientForm({
+      name: "",
+      quantity: "",
+      brand: "",
+      unit: "",
+      cost: "",
+    })
+    setIsAddingNewIngredient(false)
+  }
+
+  const handleSaveIngredient = async () => {
+    if (!editIngredientForm.name.trim() || !editIngredientForm.quantity) {
+      alert("Please fill in ingredient name and quantity")
+      return
+    }
+
+    const updatedIngredient = {
+      name: editIngredientForm.name.trim(),
+      quantity: Number.parseFloat(editIngredientForm.quantity),
+      brand: editIngredientForm.brand.trim(),
+      unit: editIngredientForm.unit || "grams",
+      cost: Number.parseFloat(editIngredientForm.cost) || 1,
+    }
+
+    try {
+      if (isAddingNewIngredient) {
+        // Add new ingredient
+        setIngredients((prev) => [...prev, updatedIngredient])
+        alert("New ingredient added successfully!")
+      } else {
+        // Update existing ingredient
+        setIngredients((prev) => prev.map((ing, index) => (index === editingIngredient ? updatedIngredient : ing)))
+        alert("Ingredient updated successfully!")
+      }
+      closeEditIngredientModal()
+    } catch (err) {
+      console.error("Error saving ingredient:", err)
+      alert("Error saving ingredient. Please try again.")
+    }
+  }
+
+  const handleDeleteIngredient = (index) => {
+    if (window.confirm("Are you sure you want to delete this ingredient?")) {
+      setIngredients((prev) => prev.filter((_, i) => i !== index))
+      alert("Ingredient deleted successfully!")
+    }
   }
 
   // Core calculations
@@ -285,7 +379,6 @@ const CostingCalculator = () => {
                     <Cookie className="w-5 h-5 mr-2 text-amber-600" />
                     Add Ingredients
                   </h3>
-
                   <div className="space-y-4">
                     <div className="space-y-2 mt-[10px]">
                       <label className="block text-sm font-medium text-gray-700">Ingredient Name</label>
@@ -297,7 +390,6 @@ const CostingCalculator = () => {
                         placeholder="e.g., Flour, Sugar, Eggs..."
                       />
                     </div>
-
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">Quantity (grams)</label>
                       <input
@@ -309,7 +401,6 @@ const CostingCalculator = () => {
                         placeholder="0.00"
                       />
                     </div>
-
                     <button
                       onClick={addIngredientToProduct}
                       className="w-full bg-amber-600 text-white px-4 py-3 rounded-xl hover:bg-amber-700 transition-all duration-200 flex items-center justify-center space-x-2 font-medium shadow-md hover:shadow-lg cursor-pointer active:scale-95"
@@ -365,6 +456,117 @@ const CostingCalculator = () => {
                   className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-200 font-medium shadow-md hover:shadow-lg cursor-pointer active:scale-95"
                 >
                   Add Product
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Ingredient Modal */}
+        {showEditIngredientModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
+              {/* Modal Header */}
+              <div className="bg-amber-700 px-6 py-4 text-white flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-opacity-20 rounded-lg flex items-center justify-center">
+                      {isAddingNewIngredient ? <Plus className="w-5 h-5" /> : <Edit className="w-5 h-5" />}
+                    </div>
+                    <h2 className="text-xl font-semibold">
+                      {isAddingNewIngredient ? "Add New Ingredient" : "Edit Ingredient"}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={closeEditIngredientModal}
+                    className="p-2 hover:bg-gray-100 hover:rounded-2xl hover:text-amber-600 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Ingredient Name</label>
+                  <input
+                    type="text"
+                    value={editIngredientForm.name}
+                    onChange={(e) => setEditIngredientForm((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Enter ingredient name..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Quantity</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editIngredientForm.quantity}
+                    onChange={(e) => setEditIngredientForm((prev) => ({ ...prev, quantity: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Brand</label>
+                  <input
+                    type="text"
+                    value={editIngredientForm.brand}
+                    onChange={(e) => setEditIngredientForm((prev) => ({ ...prev, brand: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Enter brand name..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Unit</label>
+                  <select
+                    value={editIngredientForm.unit}
+                    onChange={(e) => setEditIngredientForm((prev) => ({ ...prev, unit: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                  >
+                    <option value="grams">Grams</option>
+                    <option value="kg">Kilograms</option>
+                    <option value="ml">Milliliters</option>
+                    <option value="liters">Liters</option>
+                    <option value="pieces">Pieces</option>
+                    <option value="cups">Cups</option>
+                    <option value="tbsp">Tablespoons</option>
+                    <option value="tsp">Teaspoons</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Cost per Unit (₱)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editIngredientForm.cost}
+                    onChange={(e) => setEditIngredientForm((prev) => ({ ...prev, cost: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 flex-shrink-0 border-t border-gray-200">
+                <button
+                  onClick={closeEditIngredientModal}
+                  className="px-6 py-2 text-gray-700 border-2 border-gray-200 rounded-xl hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 font-medium cursor-pointer active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveIngredient}
+                  className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-200 font-medium shadow-md hover:shadow-lg cursor-pointer active:scale-95 flex items-center space-x-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isAddingNewIngredient ? "Add Ingredient" : "Save Changes"}</span>
                 </button>
               </div>
             </div>
@@ -468,7 +670,16 @@ const CostingCalculator = () => {
                     <Package className="w-5 h-5 mr-2" />
                     Ingredients Breakdown
                   </h3>
-                  <span className="text-sm text-amber-700 font-medium">{ingredients.length} ingredients</span>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm text-amber-700 font-medium">{ingredients.length} ingredients</span>
+                    <button
+                      onClick={openAddIngredientModal}
+                      className="flex items-center space-x-1 bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-all duration-200 text-sm font-medium cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add</span>
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -489,6 +700,9 @@ const CostingCalculator = () => {
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
                         Total Cost
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -516,12 +730,30 @@ const CostingCalculator = () => {
                             ₱{(ing.quantity * ing.cost * desiredPortions).toFixed(2)}
                           </div>
                         </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            <button
+                              onClick={() => openEditIngredientModal(ing, index)}
+                              className="p-2 text-amber-600 hover:bg-amber-50 hover:text-amber-700 rounded-lg transition-all duration-200 cursor-pointer"
+                              title="Edit ingredient"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteIngredient(index)}
+                              className="p-2 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200 cursor-pointer"
+                              title="Delete ingredient"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot className="bg-gray-50">
                     <tr>
-                      <td colSpan="4" className="px-4 py-4 text-right font-semibold text-gray-900">
+                      <td colSpan="5" className="px-4 py-4 text-right font-semibold text-gray-900">
                         Total Cost:
                       </td>
                       <td className="px-4 py-4 text-right font-bold text-lg text-green-600">
