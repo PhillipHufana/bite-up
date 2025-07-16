@@ -432,7 +432,7 @@ const lowStockCount = flatIngredients.filter(
       {/* Adds the Navbar component */}
       <Navbar activeTab="INVENTORY" />
 
-      <main className="container mx-auto px-6 py-8">
+      <main className="container mx-auto px-6 py-10 max-w-6xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <h2 className="font-[Marcellus] text-8xl sm:text-4xl font-bold text-amber-800">
             General Inventory
