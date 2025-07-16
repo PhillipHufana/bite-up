@@ -234,10 +234,7 @@ function InventoryRecords() {
                           Unit
                         </th>
                         <th className="px-4 py-3 text-left font-poppins font-semibold text-[#7b3306]">
-                          Price per Unit
-                        </th>
-                        <th className="px-4 py-3 text-left font-poppins font-semibold text-[#7b3306]">
-                          Total Cost
+                          Price
                         </th>
                       </tr>
                     </thead>
@@ -248,41 +245,20 @@ function InventoryRecords() {
                           style={{ backgroundColor: "#ffffff" }}
                           className="hover:bg-opacity-25 transition-colors duration-200"
                         >
-                          <td
-                            className="px-4 py-3 font-poppins"
-                            style={{ color: "#222222" }}
-                          >
+                          <td className="px-4 py-3 font-poppins" style={{ color: "#222222" }}>
                             {item.ingredient}
                           </td>
-                          <td
-                            className="px-4 py-3 font-poppins"
-                            style={{ color: "#222222" }}
-                          >
+                          <td className="px-4 py-3 font-poppins" style={{ color: "#222222" }}>
                             {item.brand}
                           </td>
-                          <td
-                            className="px-4 py-3 font-poppins"
-                            style={{ color: "#222222" }}
-                          >
+                          <td className="px-4 py-3 font-poppins" style={{ color: "#222222" }}>
                             {item.quantity}
                           </td>
-                          <td
-                            className="px-4 py-3 font-poppins"
-                            style={{ color: "#222222" }}
-                          >
+                          <td className="px-4 py-3 font-poppins" style={{ color: "#222222" }}>
                             {item.unit}
                           </td>
-                          <td
-                            className="px-4 py-3 font-poppins"
-                            style={{ color: "#222222" }}
-                          >
-                            {item.unitPrice}
-                          </td>
-                          <td
-                            className="px-4 py-3 font-poppins"
-                            style={{ color: "#222222" }}
-                          >
-                            {item.totalCost}
+                          <td className="px-4 py-3 font-poppins" style={{ color: "#222222" }}>
+                            {item.price}
                           </td>
                         </tr>
                       ))}

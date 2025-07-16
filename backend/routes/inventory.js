@@ -3,19 +3,17 @@ import db from "../db.js";
 
 const router = express.Router();
 
-// GET /api/inventory/records
 router.get("/records", async (req, res) => {
   const query = `
     SELECT 
       r.receipt_id,
       r.receipt_date,
       r.supplier_name,
-      r.total_cost,
       ri.quantity,
-      ri.unit_price,
       i.name AS ingredient_name,
       i.brand,
-      i.unit
+      i.unit,
+      i.price AS ingredient_price
     FROM receipt r
     JOIN receiptitem ri ON r.receipt_id = ri.receipt_id
     JOIN ingredient i ON ri.ingredient_id = i.ingredient_id
@@ -26,16 +24,15 @@ router.get("/records", async (req, res) => {
     const [rows] = await db.query(query);
     const recordsMap = {};
 
-    rows.forEach((row) => {
+    for (const row of rows) {
       const {
         receipt_id,
         receipt_date,
         supplier_name,
-        total_cost,
         ingredient_name,
         brand,
         unit,
-        unit_price,
+        ingredient_price,
         quantity,
       } = row;
 
@@ -44,27 +41,38 @@ router.get("/records", async (req, res) => {
           id: receipt_id,
           date: receipt_date,
           supplier: supplier_name,
-          totalCost: `P ${parseFloat(total_cost).toFixed(2)}`,
+          totalCostValue: 0,
           itemCount: 0,
           items: [],
         };
       }
 
-      recordsMap[receipt_id].items.push({
-        ingredient: ingredient_name,
-        brand: brand,
-        quantity: quantity,
-        unit: unit,
-        unitPrice: `P ${parseFloat(unit_price).toFixed(2)}`,
-        totalCost: `P ${(parseFloat(unit_price) * parseFloat(quantity)).toFixed(
-          2
-        )}`,
-      });
+      const price = parseFloat(ingredient_price);
+      const qty = parseFloat(quantity);
 
-      recordsMap[receipt_id].itemCount += 1;
-    });
+      // Ensure values are valid numbers
+      if (!isNaN(price) && !isNaN(qty)) {
+        const itemSubtotal = price * qty;
 
-    res.json(Object.values(recordsMap));
+        recordsMap[receipt_id].items.push({
+          ingredient: ingredient_name,
+          brand: brand,
+          quantity: qty,
+          unit: unit,
+          price: `P ${price.toFixed(2)}`,
+        });
+
+        recordsMap[receipt_id].itemCount += 1;
+        recordsMap[receipt_id].totalCostValue += itemSubtotal;
+      }
+    }
+
+    const formattedRecords = Object.values(recordsMap).map((record) => ({
+      ...record,
+      totalCost: `P ${record.totalCostValue.toFixed(2)}`, 
+    }));
+
+    res.json(formattedRecords);
   } catch (err) {
     console.error("Error fetching inventory records:", err);
     res.status(500).json({ error: "Failed to load inventory records." });
