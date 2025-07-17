@@ -96,10 +96,7 @@ function AddOrderModal({ isOpen, onClose, onAddOrder, customers }) {
         if (item.id === id) {
           const updated = { ...item, [field]: value };
           if (field === "name") {
-            const match = products.find(
-              (p) => p.name.toLowerCase() === value.toLowerCase()
-            );
-            if (match) updated.price = match.cost;
+            updated.name = value;
           }
           return updated;
         }
@@ -109,11 +106,12 @@ function AddOrderModal({ isOpen, onClose, onAddOrder, customers }) {
   };
 
   const calculateTotal = () => {
-    return orderItems.reduce(
-      (total, item) => total + item.quantity * item.price,
-      0
-    );
+    return orderItems.reduce((total, item) => {
+      const price = parseFloat(item.price);
+      return total + (item.quantity * (isNaN(price) ? 0 : price));
+    }, 0);
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -317,12 +315,12 @@ function AddOrderModal({ isOpen, onClose, onAddOrder, customers }) {
                         Price <span className="text-red-500">*</span>
                       </label>
                       <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        type="text"
                         value={item.price}
-                        readOnly
-                        className="w-full border border-amber-300 rounded-xl px-4 py-2 text-gray-600"
+                        onChange={(e) =>
+                          updateOrderItem(item.id, "price", e.target.value)
+                        }
+                        className="w-full border border-amber-300 rounded-xl px-4 py-2 text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
                         required
                       />
                     </div>

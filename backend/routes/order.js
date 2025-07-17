@@ -33,7 +33,7 @@ ORDER BY okb.order_date DESC
 // GET products
 router.get("/products", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT name, cost FROM product");
+    const [rows] = await db.query("SELECT name FROM product");
     res.json(rows);
   } catch (err) {
     console.error("Product fetch failed:", err);

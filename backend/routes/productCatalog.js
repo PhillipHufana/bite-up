@@ -1,24 +1,29 @@
 import express from "express";
 import db from "../db.js";
-import { v4 as uuidv4 } from "uuid"; // Install with: npm install uuid
+import { v4 as uuidv4 } from "uuid";
 
 const router = express.Router();
 
-// GET all products with total cost of ingredients
+// GET all products with total cost (FIFO-based per ingredient)
 router.get("/", async (req, res) => {
   const sql = `
     SELECT 
       p.product_id AS id,
       p.name,
-      SUM(pi.quantity_needed * COALESCE(ing.cost_per_unit, 0)) AS totalCostIngredients
+      SUM(
+        pi.quantity_needed * (
+          SELECT cost_per_unit
+          FROM ingredient i
+          WHERE LOWER(TRIM(i.name)) = LOWER(TRIM(pi.ingredients))
+            AND i.quantity > 0
+          ORDER BY i.purchase_date ASC
+          LIMIT 1
+        )
+      ) AS totalCostIngredients
     FROM product p
     JOIN productingredient pi ON p.product_id = pi.product_id
-    LEFT JOIN (
-      SELECT name, MIN(cost_per_unit) AS cost_per_unit
-      FROM ingredient
-      GROUP BY name
-    ) ing ON LOWER(TRIM(pi.ingredients)) = LOWER(TRIM(ing.name))
-    GROUP BY p.product_id`;
+    GROUP BY p.product_id, p.name
+  `;
 
   try {
     const [results] = await db.query(sql);
@@ -36,10 +41,10 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET all ingredient names for autocomplete
+// GET ingredient names for autocomplete
 router.get("/ingredients/all-names", async (req, res) => {
   try {
-    const [results] = await db.query("SELECT name FROM ingredient");
+    const [results] = await db.query("SELECT DISTINCT name FROM ingredient");
     const names = results.map((row) => row.name);
     res.json(names);
   } catch (err) {
@@ -48,7 +53,7 @@ router.get("/ingredients/all-names", async (req, res) => {
   }
 });
 
-// POST create new product
+// POST new product with ingredients
 router.post("/", async (req, res) => {
   const { name, ingredients } = req.body;
 
@@ -56,16 +61,14 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "Invalid product data" });
   }
 
-  const productId = uuidv4(); // Generate a unique product_id
+  const productId = uuidv4();
 
   try {
-    // Insert into `product` table
+    // Insert product
     await db.query("INSERT INTO product (product_id, name) VALUES (?, ?)", [productId, name]);
 
-    // Insert each ingredient
     for (const ing of ingredients) {
-      // Fetch unit from ingredient table
-      const [rows] = await db.query("SELECT unit FROM ingredient WHERE name = ?", [ing.name]);
+      const [rows] = await db.query("SELECT unit FROM ingredient WHERE name = ? LIMIT 1", [ing.name]);
       const unit = rows.length > 0 ? rows[0].unit : "grams";
 
       await db.query(
@@ -82,22 +85,34 @@ router.post("/", async (req, res) => {
   }
 });
 
-
-
-// GET product details by ID
+// GET detailed costing per ingredient for a given product
 router.get("/:id", async (req, res) => {
   const productId = req.params.id;
+
   const sql = `
     SELECT 
-      i.name,
-      i.brand,
+      pi.ingredients AS name,
+      (
+        SELECT brand
+        FROM ingredient i
+        WHERE LOWER(TRIM(i.name)) = LOWER(TRIM(pi.ingredients))
+          AND i.quantity > 0
+        ORDER BY i.purchase_date ASC
+        LIMIT 1
+      ) AS brand,
       pi.unit,
       CAST(pi.quantity_needed AS FLOAT) AS quantity,
-      CAST(i.cost_per_unit AS FLOAT) AS cost
+      (
+        SELECT cost_per_unit
+        FROM ingredient i
+        WHERE LOWER(TRIM(i.name)) = LOWER(TRIM(pi.ingredients))
+          AND i.quantity > 0
+        ORDER BY i.purchase_date ASC
+        LIMIT 1
+      ) AS cost
     FROM productingredient pi
-    LEFT JOIN ingredient i 
-      ON LOWER(TRIM(pi.ingredients)) = LOWER(TRIM(i.name))
-    WHERE pi.product_id = ?`;
+    WHERE pi.product_id = ?
+  `;
 
   try {
     const [results] = await db.query(sql, [productId]);
