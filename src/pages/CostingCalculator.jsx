@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import axios from "axios"
 import {
   ChevronLeft,
@@ -13,8 +13,133 @@ import {
   Cookie,
   Edit,
   Save,
+  Search,
+  Check,
 } from "lucide-react"
 import Navbar from "../components/navbar"
+
+// Custom Ingredient Dropdown Component
+const IngredientDropdown = ({ value, onChange, suggestions, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [filteredSuggestions, setFilteredSuggestions] = useState([])
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
+  const dropdownRef = useRef(null)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (value) {
+      const filtered = suggestions.filter((suggestion) => suggestion.toLowerCase().includes(value.toLowerCase()))
+      setFilteredSuggestions(filtered)
+    } else {
+      setFilteredSuggestions(suggestions)
+    }
+  }, [value, suggestions])
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const handleInputChange = (e) => {
+    const newValue = e.target.value
+    onChange(newValue)
+    setIsOpen(true)
+    setHighlightedIndex(-1)
+  }
+
+  const handleInputFocus = () => {
+    setIsOpen(true)
+  }
+
+  const handleSuggestionClick = (suggestion) => {
+    onChange(suggestion)
+    setIsOpen(false)
+    setHighlightedIndex(-1)
+  }
+
+  const handleKeyDown = (e) => {
+    if (!isOpen) return
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault()
+        setHighlightedIndex((prev) => (prev < filteredSuggestions.length - 1 ? prev + 1 : 0))
+        break
+      case "ArrowUp":
+        e.preventDefault()
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filteredSuggestions.length - 1))
+        break
+      case "Enter":
+        e.preventDefault()
+        if (highlightedIndex >= 0 && filteredSuggestions[highlightedIndex]) {
+          handleSuggestionClick(filteredSuggestions[highlightedIndex])
+        }
+        break
+      case "Escape":
+        setIsOpen(false)
+        setHighlightedIndex(-1)
+        break
+    }
+  }
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
+          onKeyDown={handleKeyDown}
+          className="w-full px-4 py-3 pr-10 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 hover:border-gray-300"
+          placeholder={placeholder}
+        />
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+          <Search className="w-4 h-4 text-gray-400" />
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+          {filteredSuggestions.length > 0 ? (
+            <>
+              <div className="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50 border-b border-gray-100 rounded-t-xl">
+                {filteredSuggestions.length} ingredient{filteredSuggestions.length !== 1 ? "s" : ""} found
+              </div>
+              {filteredSuggestions.map((suggestion, index) => (
+                <div
+                  key={index}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className={`px-4 py-3 cursor-pointer transition-all duration-150 flex items-center justify-between group ${
+                    index === highlightedIndex
+                      ? "bg-amber-50 text-amber-900 border-l-4 border-amber-500"
+                      : "hover:bg-amber-50 hover:text-amber-900"
+                  } ${index === filteredSuggestions.length - 1 ? "rounded-b-xl" : ""}`}
+                >
+                  <span className="font-medium">{suggestion}</span>
+                  {index === highlightedIndex && <Check className="w-4 h-4 text-amber-600" />}
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className="px-4 py-8 text-center text-gray-500">
+              <Search className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm font-medium">No ingredients found</p>
+              <p className="text-xs text-gray-400 mt-1">Try searching with a different term</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const CostingCalculator = () => {
   const [selectedProduct, setSelectedProduct] = useState(0)
@@ -85,26 +210,26 @@ const CostingCalculator = () => {
 
   // Add ingredient to new product
   const addIngredientToProduct = () => {
-    if (!currentIngredient.name.trim() || !currentIngredient.quantity) {
-      alert("Please fill in both ingredient name and quantity")
+    const nameTrimmed = currentIngredient.name.trim()
+    const isValid = ingredientSuggestions.includes(nameTrimmed)
+    if (!isValid) {
+      alert("Ingredient not found in inventory.")
+      return
+    }
+    if (!nameTrimmed || !currentIngredient.quantity) {
+      alert("Please fill in both fields.")
       return
     }
     const ingredient = {
-      name: currentIngredient.name.trim(),
+      name: nameTrimmed,
       quantity: Number.parseFloat(currentIngredient.quantity),
-      unit: "grams", // Default unit
-      brand: "", // Default empty brand
-      cost: 1, // Default cost for calculations
+      unit: "grams",
     }
     setNewProduct((prev) => ({
       ...prev,
       ingredients: [...prev.ingredients, ingredient],
     }))
-    // Reset current ingredient form
-    setCurrentIngredient({
-      name: "",
-      quantity: "",
-    })
+    setCurrentIngredient({ name: "", quantity: "" })
   }
 
   // Remove ingredient from new product
@@ -117,28 +242,23 @@ const CostingCalculator = () => {
 
   // Handle form submission
   const handleAddProduct = async () => {
-    if (!newProduct.name.trim()) {
-      alert("Please provide a product name")
-      return
-    }
-    if (newProduct.ingredients.length === 0) {
-      alert("Please add at least one ingredient")
+    if (!newProduct.name.trim() || newProduct.ingredients.length === 0) {
+      alert("Provide product name and at least one ingredient.")
       return
     }
     try {
-      const newProductData = {
-        id: Date.now(),
+      await axios.post("/api/catalog", {
         name: newProduct.name.trim(),
         ingredients: newProduct.ingredients,
-      }
-      setProducts((prev) => [...prev, newProductData])
-      setNewProduct({ name: "", ingredients: [] })
-      setShowAddProductModal(false)
-      setSelectedProduct(products.length)
-      alert("Product added successfully!")
+      })
+      // Refresh product list
+      const refreshed = await axios.get("/api/catalog")
+      setProducts(refreshed.data)
+      setSelectedProduct(refreshed.data.length - 1)
+      closeModal()
     } catch (err) {
       console.error("Error adding product:", err)
-      alert("Error adding product. Please try again.")
+      alert("Error saving product.")
     }
   }
 
@@ -194,7 +314,6 @@ const CostingCalculator = () => {
       alert("Please fill in ingredient name and quantity")
       return
     }
-
     const updatedIngredient = {
       name: editIngredientForm.name.trim(),
       quantity: Number.parseFloat(editIngredientForm.quantity),
@@ -202,7 +321,6 @@ const CostingCalculator = () => {
       unit: editIngredientForm.unit || "grams",
       cost: Number.parseFloat(editIngredientForm.cost) || 1,
     }
-
     try {
       if (isAddingNewIngredient) {
         // Add new ingredient
@@ -226,6 +344,16 @@ const CostingCalculator = () => {
       alert("Ingredient deleted successfully!")
     }
   }
+
+  const [ingredientSuggestions, setIngredientSuggestions] = useState([])
+  useEffect(() => {
+    if (showAddProductModal) {
+      axios
+        .get("/api/catalog/ingredients/all-names")
+        .then((res) => setIngredientSuggestions(res.data))
+        .catch((err) => console.error("Error loading ingredients:", err))
+    }
+  }, [showAddProductModal])
 
   // Core calculations
   const weightPerPortion = ingredients.reduce((sum, ing) => sum + ing.quantity, 0)
@@ -382,12 +510,11 @@ const CostingCalculator = () => {
                   <div className="space-y-4">
                     <div className="space-y-2 mt-[10px]">
                       <label className="block text-sm font-medium text-gray-700">Ingredient Name</label>
-                      <input
-                        type="text"
+                      <IngredientDropdown
                         value={currentIngredient.name}
-                        onChange={(e) => setCurrentIngredient((prev) => ({ ...prev, name: e.target.value }))}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 hover:border-gray-300"
-                        placeholder="e.g., Flour, Sugar, Eggs..."
+                        onChange={(value) => setCurrentIngredient((prev) => ({ ...prev, name: value }))}
+                        suggestions={ingredientSuggestions}
+                        placeholder="Search for ingredients..."
                       />
                     </div>
                     <div className="space-y-2">
@@ -498,7 +625,6 @@ const CostingCalculator = () => {
                     placeholder="Enter ingredient name..."
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Quantity</label>
                   <input
@@ -510,7 +636,6 @@ const CostingCalculator = () => {
                     placeholder="0.00"
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Brand</label>
                   <input
@@ -521,7 +646,6 @@ const CostingCalculator = () => {
                     placeholder="Enter brand name..."
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Unit</label>
                   <select
@@ -539,7 +663,6 @@ const CostingCalculator = () => {
                     <option value="tsp">Teaspoons</option>
                   </select>
                 </div>
-
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Cost per Unit (₱)</label>
                   <input

@@ -1,5 +1,6 @@
 import express from "express";
 import db from "../db.js";
+import { v4 as uuidv4 } from "uuid"; // Install with: npm install uuid
 
 const router = express.Router();
 
@@ -34,6 +35,54 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// GET all ingredient names for autocomplete
+router.get("/ingredients/all-names", async (req, res) => {
+  try {
+    const [results] = await db.query("SELECT name FROM ingredient");
+    const names = results.map((row) => row.name);
+    res.json(names);
+  } catch (err) {
+    console.error("Error fetching ingredient names:", err.message);
+    res.status(500).json({ error: "Failed to fetch ingredient names" });
+  }
+});
+
+// POST create new product
+router.post("/", async (req, res) => {
+  const { name, ingredients } = req.body;
+
+  if (!name || !Array.isArray(ingredients)) {
+    return res.status(400).json({ error: "Invalid product data" });
+  }
+
+  const productId = uuidv4(); // Generate a unique product_id
+
+  try {
+    // Insert into `product` table
+    await db.query("INSERT INTO product (product_id, name) VALUES (?, ?)", [productId, name]);
+
+    // Insert each ingredient
+    for (const ing of ingredients) {
+      // Fetch unit from ingredient table
+      const [rows] = await db.query("SELECT unit FROM ingredient WHERE name = ?", [ing.name]);
+      const unit = rows.length > 0 ? rows[0].unit : "grams";
+
+      await db.query(
+        `INSERT INTO productingredient (product_id, product_name, ingredients, quantity_needed, unit)
+         VALUES (?, ?, ?, ?, ?)`,
+        [productId, name, ing.name, ing.quantity, unit]
+      );
+    }
+
+    res.status(201).json({ message: "Product and ingredients saved", id: productId });
+  } catch (err) {
+    console.error("Error inserting product:", err.message);
+    res.status(500).json({ error: "Failed to add product" });
+  }
+});
+
+
 
 // GET product details by ID
 router.get("/:id", async (req, res) => {
