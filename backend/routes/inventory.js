@@ -47,29 +47,26 @@ router.get("/records", async (req, res) => {
         };
       }
 
-      const price = parseFloat(ingredient_price);
+      const price = parseFloat(ingredient_price); 
       const qty = parseFloat(quantity);
 
-      // Ensure values are valid numbers
       if (!isNaN(price) && !isNaN(qty)) {
-        const itemSubtotal = price * qty;
-
         recordsMap[receipt_id].items.push({
           ingredient: ingredient_name,
           brand: brand,
           quantity: qty,
           unit: unit,
-          price: `P ${price.toFixed(2)}`,
+          price: `P ${price.toFixed(2)}`, 
         });
 
         recordsMap[receipt_id].itemCount += 1;
-        recordsMap[receipt_id].totalCostValue += itemSubtotal;
+        recordsMap[receipt_id].totalCostValue += price;
       }
     }
 
     const formattedRecords = Object.values(recordsMap).map((record) => ({
       ...record,
-      totalCost: `P ${record.totalCostValue.toFixed(2)}`, 
+      totalCost: `P ${record.totalCostValue.toFixed(2)}`,
     }));
 
     res.json(formattedRecords);
