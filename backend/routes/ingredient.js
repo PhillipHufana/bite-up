@@ -180,14 +180,34 @@ router.post("/bulk", async (req, res) => {
       [receiptId, purchase_date, supplier_name, totalCost]
     );
 
-    for (const [ingredientId, quantity, unit_price] of receiptItems) {
-      const receiptItemId = await generateNextReceiptItemId();
-      await db.query(
-        `INSERT INTO receiptitem (receipt_item_id, receipt_id, ingredient_id, quantity, unit_price)
-         VALUES (?, ?, ?, ?, ?)`,
-        [receiptItemId, receiptId, ingredientId, quantity, unit_price]
-      );
-    }
+    for (const item of items) {
+        const {
+          name,
+          brand,
+          unit,
+          price,
+          quantity
+        } = item;
+
+        const parsedPrice = parseFloat(price);
+        const parsedQty = parseFloat(quantity);
+        const receiptItemId = await generateNextReceiptItemId();
+
+        await db.query(
+          `INSERT INTO receiptitem (
+            receipt_item_id, receipt_id, unit_price, quantity, ingredient_name, brand, unit
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            receiptItemId,
+            receiptId,
+            parsedPrice,
+            parsedQty,
+            name,
+            brand,
+            unit
+          ]
+        );
+      }
 
     res.status(200).json({
       success: true,
