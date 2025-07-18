@@ -123,4 +123,108 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+  // Add new ingredient to existing product
+  router.post("/:productId/ingredient", async (req, res) => {
+    const { productId } = req.params;
+    const { ingredientName, quantity } = req.body;
+
+    if (!ingredientName || !quantity) {
+      return res.status(400).json({ error: "Missing data." });
+    }
+
+    try {
+      // Get product name
+      const [productRows] = await db.query("SELECT name FROM product WHERE product_id = ?", [productId]);
+      if (productRows.length === 0) {
+        return res.status(404).json({ error: "Product not found." });
+      }
+      const productName = productRows[0].name;
+
+      // Get brand, unit, cost_per_unit for the ingredient
+      const [ingredientRows] = await db.query(`
+        SELECT brand, unit, cost_per_unit
+        FROM ingredient
+        WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND quantity > 0
+        ORDER BY purchase_date ASC
+        LIMIT 1
+      `, [ingredientName]);
+
+      if (ingredientRows.length === 0) {
+        return res.status(404).json({ error: "Ingredient not found in inventory." });
+      }
+
+      const { brand, unit, cost_per_unit } = ingredientRows[0];
+
+      // Insert into productingredient table
+      await db.query(`
+        INSERT INTO productingredient (product_id, product_name, ingredients, quantity_needed, unit)
+        VALUES (?, ?, ?, ?, ?)
+      `, [productId, productName, ingredientName, quantity, unit]);
+
+      const totalCost = cost_per_unit * quantity;
+
+      // Return inserted data to update UI
+      res.status(201).json({
+        name: ingredientName,
+        quantity: parseFloat(quantity),
+        unit,
+        brand,
+        cost: cost_per_unit,
+        totalCost,
+      });
+    } catch (err) {
+      console.error("Error inserting ingredient:", err.message);
+      res.status(500).json({ error: "Failed to add ingredient." });
+    }
+  });
+
+  // DELETE specific ingredient from product
+  router.delete("/:productId/ingredient", async (req, res) => {
+    const { productId } = req.params;
+    const { ingredientName } = req.body;
+
+    if (!ingredientName) {
+      return res.status(400).json({ error: "Missing ingredient name." });
+    }
+
+    try {
+      await db.query(
+        `DELETE FROM productingredient
+        WHERE product_id = ? AND ingredients = ?`,
+        [productId, ingredientName]
+      );
+
+      res.status(200).json({ message: "Ingredient deleted successfully." });
+    } catch (err) {
+      console.error("Error deleting ingredient:", err.message);
+      res.status(500).json({ error: "Failed to delete ingredient." });
+    }
+  });
+
+  // UPDATE quantity of a specific ingredient in a product
+  router.put("/:productId/ingredient", async (req, res) => {
+    const { productId } = req.params;
+    const { ingredientName, newQuantity } = req.body;
+
+    if (!ingredientName || newQuantity == null) {
+      return res.status(400).json({ error: "Missing data." });
+    }
+
+    try {
+      await db.query(
+        `UPDATE productingredient
+        SET quantity_needed = ?
+        WHERE product_id = ? AND ingredients = ?`,
+        [newQuantity, productId, ingredientName]
+      );
+
+      res.status(200).json({ message: "Quantity updated successfully." });
+    } catch (err) {
+      console.error("Error updating ingredient:", err.message);
+      res.status(500).json({ error: "Failed to update ingredient." });
+    }
+  });
+
+
+
 export default router;

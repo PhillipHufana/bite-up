@@ -311,49 +311,72 @@ const CostingCalculator = () => {
 
   const handleSaveIngredient = async () => {
     if (!editIngredientForm.name.trim() || !editIngredientForm.quantity) {
-      alert("Please fill in ingredient name and quantity")
-      return
+      alert("Please fill in ingredient name and quantity");
+      return;
     }
-    const updatedIngredient = {
-      name: editIngredientForm.name.trim(),
-      quantity: Number.parseFloat(editIngredientForm.quantity),
-      brand: editIngredientForm.brand.trim(),
-      unit: editIngredientForm.unit || "grams",
-      cost: Number.parseFloat(editIngredientForm.cost) || 1,
-    }
+
+    const nameTrimmed = editIngredientForm.name.trim();
+    const quantity = parseFloat(editIngredientForm.quantity);
+
     try {
       if (isAddingNewIngredient) {
-        // Add new ingredient
-        setIngredients((prev) => [...prev, updatedIngredient])
-        alert("New ingredient added successfully!")
+        // same as before
+        const res = await axios.post(`/api/catalog/${currentProduct.id}/ingredient`, {
+          ingredientName: nameTrimmed,
+          quantity,
+        });
+        setIngredients((prev) => [...prev, res.data]);
+        alert("New ingredient added successfully!");
       } else {
-        // Update existing ingredient
-        setIngredients((prev) => prev.map((ing, index) => (index === editingIngredient ? updatedIngredient : ing)))
-        alert("Ingredient updated successfully!")
-      }
-      closeEditIngredientModal()
-    } catch (err) {
-      console.error("Error saving ingredient:", err)
-      alert("Error saving ingredient. Please try again.")
-    }
-  }
+        // 🛠 UPDATE logic for existing ingredient
+        await axios.put(`/api/catalog/${currentProduct.id}/ingredient`, {
+          ingredientName: nameTrimmed,
+          newQuantity: quantity,
+        });
 
-  const handleDeleteIngredient = (index) => {
-    if (window.confirm("Are you sure you want to delete this ingredient?")) {
-      setIngredients((prev) => prev.filter((_, i) => i !== index))
-      alert("Ingredient deleted successfully!")
+        // Update local state
+        setIngredients((prev) =>
+          prev.map((ing, idx) =>
+            idx === editingIngredient ? { ...ing, quantity } : ing
+          )
+        );
+        alert("Ingredient quantity updated successfully!");
+      }
+
+      closeEditIngredientModal();
+    } catch (err) {
+      console.error("Error saving ingredient:", err);
+      alert("Error saving ingredient. Please try again.");
     }
-  }
+  };
+
+
+
+  const handleDeleteIngredient = async (index) => {
+    const ingredientToDelete = ingredients[index];
+    if (!ingredientToDelete || !window.confirm("Are you sure you want to delete this ingredient?")) return;
+
+    try {
+      await axios.delete(`/api/catalog/${currentProduct.id}/ingredient`, {
+        data: { ingredientName: ingredientToDelete.name },
+      });
+
+      setIngredients((prev) => prev.filter((_, i) => i !== index));
+      alert("Ingredient deleted successfully!");
+    } catch (err) {
+      console.error("Error deleting ingredient:", err);
+      alert("Failed to delete ingredient.");
+    }
+  };
+
 
   const [ingredientSuggestions, setIngredientSuggestions] = useState([])
   useEffect(() => {
-    if (showAddProductModal) {
-      axios
-        .get("/api/catalog/ingredients/all-names")
-        .then((res) => setIngredientSuggestions(res.data))
-        .catch((err) => console.error("Error loading ingredients:", err))
-    }
-  }, [showAddProductModal])
+    axios
+      .get("/api/catalog/ingredients/all-names")
+      .then((res) => setIngredientSuggestions(res.data))
+      .catch((err) => console.error("Error loading ingredients:", err))
+  }, [])
 
   // Core calculations
   const weightPerPortion = ingredients.reduce((sum, ing) => sum + ing.quantity, 0)
@@ -617,13 +640,12 @@ const CostingCalculator = () => {
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Ingredient Name</label>
-                  <input
-                    type="text"
-                    value={editIngredientForm.name}
-                    onChange={(e) => setEditIngredientForm((prev) => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Enter ingredient name..."
-                  />
+                    <IngredientDropdown
+                      value={editIngredientForm.name}
+                      onChange={(value) => setEditIngredientForm((prev) => ({ ...prev, name: value }))}
+                      suggestions={ingredientSuggestions}
+                      placeholder="Search for ingredients..."
+                    />
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Quantity</label>
@@ -632,44 +654,6 @@ const CostingCalculator = () => {
                     step="0.01"
                     value={editIngredientForm.quantity}
                     onChange={(e) => setEditIngredientForm((prev) => ({ ...prev, quantity: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">Brand</label>
-                  <input
-                    type="text"
-                    value={editIngredientForm.brand}
-                    onChange={(e) => setEditIngredientForm((prev) => ({ ...prev, brand: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Enter brand name..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">Unit</label>
-                  <select
-                    value={editIngredientForm.unit}
-                    onChange={(e) => setEditIngredientForm((prev) => ({ ...prev, unit: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
-                  >
-                    <option value="grams">Grams</option>
-                    <option value="kg">Kilograms</option>
-                    <option value="ml">Milliliters</option>
-                    <option value="liters">Liters</option>
-                    <option value="pieces">Pieces</option>
-                    <option value="cups">Cups</option>
-                    <option value="tbsp">Tablespoons</option>
-                    <option value="tsp">Teaspoons</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">Cost per Unit (₱)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editIngredientForm.cost}
-                    onChange={(e) => setEditIngredientForm((prev) => ({ ...prev, cost: e.target.value }))}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
                     placeholder="0.00"
                   />
