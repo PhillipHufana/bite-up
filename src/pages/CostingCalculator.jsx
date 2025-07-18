@@ -384,7 +384,7 @@ const CostingCalculator = () => {
   const ingredientWeightPerPortion = weightPerPortion
   const totalCostIngredients = ingredients.reduce((sum, ing) => sum + ing.quantity * ing.cost * desiredPortions, 0) || 0
   const costPerPortion = totalCostIngredients / desiredPortions
-  const suggestedSellingPrice = Math.ceil(costPerPortion * 3)
+  const suggestedSellingPrice = Math.ceil(costPerPortion * 3 * 100) / 100
   const totalSales = suggestedSellingPrice * desiredPortions
   const foodCostPercentage = Math.round((costPerPortion / suggestedSellingPrice) * 100)
   const overheadExpense = totalSales * 0.4
