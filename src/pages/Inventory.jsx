@@ -271,6 +271,7 @@ const Inventory = () => {
     setFormItems((prevItems) => {
       const newItems = [...prevItems]
       newItems[index][field] = value
+
       if (field === "unit") {
         const unit = value.toLowerCase()
         if (unit === "g" || unit === "kg") {
@@ -279,6 +280,7 @@ const Inventory = () => {
           newItems[index]["to_grams"] = "" // or retain last input
         }
       }
+
       return newItems
     })
   }
@@ -342,7 +344,6 @@ const Inventory = () => {
       })
 
       const { newlyInserted, completelyNewIds } = response.data
-
       setBoldRowId((prev) => [...prev, ...newlyInserted])
       setHighlightedRowId(completelyNewIds)
 
@@ -420,45 +421,45 @@ const Inventory = () => {
             </button>
           </div>
 
-          {/* Enhanced Low Stock Modal */}
+          {/* Compact Low Stock Modal */}
           {showLowStockModal && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden border-2 border-red-200">
-                {/* Enhanced Modal Header */}
-                <div className="bg-gradient-to-r from-red-600 via-red-700 to-amber-600 px-8 py-4 flex justify-between items-center">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-white/20 p-3 rounded-full">
-                      <AlertTriangle className="w-8 h-8 text-white" />
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden border-2 border-red-200">
+                {/* Compact Modal Header */}
+                <div className="bg-gradient-to-r from-red-600 via-red-700 to-amber-600 px-6 py-3 flex justify-between items-center">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-white/20 p-2 rounded-full">
+                      <AlertTriangle className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-3xl font-bold text-white">Low Stock Alert</h3>
-                      <p className="text-red-100 text-sm mt-1">
+                      <h3 className="text-xl font-bold text-white">Low Stock Alert</h3>
+                      <p className="text-red-100 text-sm">
                         {lowStockCount} ingredient{lowStockCount !== 1 ? "s" : ""} running low
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setShowLowStockModal(false)}
-                    className="cursor-pointer text-white hover:text-red-200 transition-colors p-3 hover:bg-white/10 rounded-full"
+                    className="cursor-pointer text-white hover:text-red-200 transition-colors p-2 hover:bg-white/10 rounded-full"
                   >
-                    <X className="w-6 h-6" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                {/* Enhanced Modal Content */}
-                <div className="p-8 max-h-[calc(90vh-140px)] overflow-y-auto">
+                {/* Compact Modal Content */}
+                <div className="p-6 max-h-[calc(85vh-120px)] overflow-y-auto">
                   {flatIngredients.filter(
                     (item) =>
                       item.initial_quantity &&
                       item.quantity <= item.initial_quantity * (item.low_stock_threshold ?? 0.2),
                   ).length === 0 ? (
-                    <div className="text-center py-16">
-                      <Package className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                      <h4 className="text-2xl font-bold text-green-700 mb-2">All Good!</h4>
+                    <div className="text-center py-12">
+                      <Package className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                      <h4 className="text-xl font-bold text-green-700 mb-2">All Good!</h4>
                       <p className="text-green-600">No ingredients are running low on stock.</p>
                     </div>
                   ) : (
-                    <div className="grid gap-6">
+                    <div className="grid gap-4">
                       {flatIngredients
                         .filter(
                           (item) =>
@@ -468,52 +469,52 @@ const Inventory = () => {
                         .map((item) => (
                           <div
                             key={item.ingredient_id}
-                            className="bg-gradient-to-r from-red-50 to-amber-50 border-2 border-red-200 rounded-2xl p-3 hover:shadow-lg transition-all duration-300"
+                            className="bg-gradient-to-r from-red-50 to-amber-50 border border-red-200 rounded-xl p-4 hover:shadow-md transition-all duration-300"
                           >
-                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                              <div className="flex items-center space-x-4">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                              <div className="flex items-center space-x-3">
                                 <div className="bg-red-100 p-2 rounded-full">
+                                  <AlertTriangle className="w-4 h-4 text-red-600" />
                                 </div>
                                 <div>
-                                  <h4 className="text-xl font-bold text-red-800">{item.name}</h4>
-                                  <p className="text-red-600 font-medium">{item.brand}</p>
-                                  <p className="text-sm text-red-500">{item.category}</p>
+                                  <h4 className="text-lg font-bold text-red-800">{item.name}</h4>
+                                  <p className="text-red-600 font-medium text-sm">{item.brand}</p>
+                                  <p className="text-xs text-red-500">{item.category}</p>
                                 </div>
                               </div>
-
-                              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
+                              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                                 <div className="text-center">
-                                  <p className="text-sm font-medium text-red-600">Current Stock</p>
-                                  <p className="text-2xl font-bold text-red-800">
+                                  <p className="text-xs font-medium text-red-600">Current</p>
+                                  <p className="text-lg font-bold text-red-800">
                                     {item.quantity} {item.unit}
                                   </p>
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-sm font-medium text-red-600">Initial Stock</p>
-                                  <p className="text-lg font-semibold text-red-700">
+                                  <p className="text-xs font-medium text-red-600">Initial</p>
+                                  <p className="text-sm font-semibold text-red-700">
                                     {item.initial_quantity} {item.unit}
                                   </p>
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-sm font-medium text-red-600">Stock Level</p>
-                                  <div className="flex items-center justify-center space-x-2">
-                                    <div className="w-16 bg-red-200 rounded-full h-2">
+                                  <p className="text-xs font-medium text-red-600">Level</p>
+                                  <div className="flex items-center justify-center space-x-1">
+                                    <div className="w-12 bg-red-200 rounded-full h-1.5">
                                       <div
-                                        className="bg-red-600 h-2 rounded-full transition-all duration-300"
+                                        className="bg-red-600 h-1.5 rounded-full transition-all duration-300"
                                         style={{
                                           width: `${Math.min(100, (item.quantity / item.initial_quantity) * 100)}%`,
                                         }}
                                       ></div>
                                     </div>
-                                    <span className="text-sm font-bold text-red-700">
+                                    <span className="text-xs font-bold text-red-700">
                                       {Math.round((item.quantity / item.initial_quantity) * 100)}%
                                     </span>
                                   </div>
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-sm font-medium text-red-600">Purchase Date</p>
-                                  <p className="text-sm font-semibold text-red-700 flex items-center justify-center space-x-1">
-                                    <Calendar className="w-4 h-4" />
+                                  <p className="text-xs font-medium text-red-600">Date</p>
+                                  <p className="text-xs font-semibold text-red-700 flex items-center justify-center space-x-1">
+                                    <Calendar className="w-3 h-3" />
                                     <span>{formatDate(item.purchase_date)}</span>
                                   </p>
                                 </div>
@@ -523,11 +524,10 @@ const Inventory = () => {
                         ))}
                     </div>
                   )}
-
-                  <div className="flex justify-center mt-8">
+                  <div className="flex justify-center mt-6">
                     <button
                       onClick={() => setShowLowStockModal(false)}
-                      className="cursor-pointer bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-2xl font-bold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
+                      className="cursor-pointer bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-2 rounded-xl font-bold transition-all duration-200 transform hover:scale-105 shadow-lg"
                     >
                       Close Alert
                     </button>
@@ -785,40 +785,40 @@ const Inventory = () => {
         )}
       </main>
 
-      {/* Enhanced Add New Items Modal */}
+      {/* Compact Add New Items Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden border-2 border-amber-200">
-            {/* Enhanced Modal Header */}
-            <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-orange-600 px-8 py-4 flex justify-between items-center">
-              <div className="flex items-center space-x-4">
-                <div className="bg-white/20 p-3 rounded-full">
-                  <Plus className="w-8 h-8 text-white" />
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border-2 border-amber-200">
+            {/* Compact Modal Header */}
+            <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-orange-600 px-6 py-3 flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <div className="bg-white/20 p-2 rounded-full">
+                  <Plus className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-3xl font-bold text-white">Add New Items</h3>
+                  <h3 className="text-xl font-bold text-white">Add New Items</h3>
                 </div>
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-white hover:text-amber-200 transition-colors p-3 hover:bg-white/10 rounded-full cursor-pointer"
+                className="text-white hover:text-amber-200 transition-colors p-2 hover:bg-white/10 rounded-full cursor-pointer"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Enhanced Modal Content */}
-            <div className="p-8 max-h-[calc(95vh-200px)] overflow-y-auto overflow-x-hidden">
-              <div className="space-y-8">
-                {/* Enhanced Supplier and Date Section */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border-2 border-amber-200">
-                  <h4 className="text-xl font-bold text-amber-800 mb-6 flex items-center space-x-2">
+            {/* Compact Modal Content */}
+            <div className="p-6 max-h-[calc(90vh-140px)] overflow-y-auto overflow-x-hidden">
+              <div className="space-y-6">
+                {/* Compact Supplier and Date Section */}
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200">
+                  <h4 className="text-lg font-bold text-amber-800 mb-4 flex items-center space-x-2">
                     <span>Purchase Information</span>
                   </h4>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Supplier Name */}
-                    <div className="space-y-3">
-                      <label className="block text-sm font-bold text-amber-800 flex items-center space-x-2">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-bold text-amber-800 flex items-center space-x-1">
                         <User className="w-4 h-4" />
                         <span>
                           Supplier Name <span className="text-red-500">*</span>
@@ -829,13 +829,13 @@ const Inventory = () => {
                         value={supplierName}
                         onChange={(e) => setSupplierName(e.target.value)}
                         placeholder="Enter supplier name..."
-                        className="w-full bg-white border-2 border-amber-300 rounded-xl px-4 py-3 text-amber-800 font-medium focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 placeholder-amber-400"
+                        className="w-full bg-white border-2 border-amber-300 rounded-lg px-3 py-2 text-amber-800 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 placeholder-amber-400"
                         required
                       />
                     </div>
                     {/* Purchase Date */}
-                    <div className="space-y-3">
-                      <label className="block text-sm font-bold text-amber-800 flex items-center space-x-2">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-bold text-amber-800 flex items-center space-x-1">
                         <Calendar className="w-4 h-4" />
                         <span>
                           Purchase Date <span className="text-red-500">*</span>
@@ -843,7 +843,7 @@ const Inventory = () => {
                       </label>
                       <input
                         type="date"
-                        className="w-full bg-white border-2 border-amber-300 rounded-xl px-4 py-3 text-amber-800 font-medium focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200"
+                        className="w-full bg-white border-2 border-amber-300 rounded-lg px-3 py-2 text-amber-800 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200"
                         value={sharedPurchaseDate}
                         onChange={(e) => setSharedPurchaseDate(e.target.value)}
                         required
@@ -852,49 +852,49 @@ const Inventory = () => {
                   </div>
                 </div>
 
-                {/* Items Section */}
-                <div className="space-y-6">
-                  <h4 className="text-xl font-bold text-amber-800 flex items-center space-x-2">
-                    <Package className="w-6 h-6" />
+                {/* Compact Items Section */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-bold text-amber-800 flex items-center space-x-2">
+                    <Package className="w-5 h-5" />
                     <span>Items to Add</span>
                   </h4>
 
                   {formItems.map((item, index) => (
                     <div
                       key={index}
-                      className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-8 shadow-lg border-2 border-amber-100 hover:border-amber-200 transition-all duration-300"
+                      className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 shadow-md border border-amber-100 hover:border-amber-200 transition-all duration-300"
                     >
-                      {/* Enhanced Item Header */}
-                      <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                      {/* Compact Item Header */}
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
                             {index + 1}
                           </div>
                           <div>
-                            <h5 className="text-2xl font-bold text-amber-800">Item {index + 1}</h5>
-                            <p className="text-amber-600 text-sm">Complete all required fields below</p>
+                            <h5 className="text-lg font-bold text-amber-800">Item {index + 1}</h5>
+                            <p className="text-amber-600 text-xs">Complete all required fields</p>
                           </div>
                         </div>
                         {formItems.length > 1 && (
                           <button
                             onClick={() => removeFormItem(index)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-3 rounded-full transition-all duration-200 shadow-md hover:shadow-lg"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-all duration-200"
                           >
-                            <X className="w-6 h-6" />
+                            <X className="w-4 h-4" />
                           </button>
                         )}
                       </div>
 
-                      {/* Enhanced Form Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {/* Compact Form Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         {/* Category */}
-                        <div className="space-y-3">
-                          <label className="block text-sm font-bold text-amber-800 mb-2">
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-amber-800">
                             Category <span className="text-red-500">*</span>
                           </label>
                           <CreatableSelect
                             isClearable
-                            placeholder="Select or create category..."
+                            placeholder="Select or create..."
                             onChange={(selected) => updateFormItem(index, "category", selected ? selected.value : "")}
                             onCreateOption={(inputValue) => updateFormItem(index, "category", inputValue)}
                             value={item.category ? { label: item.category, value: item.category } : null}
@@ -908,13 +908,13 @@ const Inventory = () => {
                         </div>
 
                         {/* Item Name */}
-                        <div className="space-y-3">
-                          <label className="block text-sm font-bold text-amber-800 mb-2">
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-amber-800">
                             Item Name <span className="text-red-500">*</span>
                           </label>
                           <CreatableSelect
                             isClearable
-                            placeholder="Select or create item..."
+                            placeholder="Select or create..."
                             onChange={(selected) => {
                               updateFormItem(index, "itemName", selected ? selected.value : "")
                               updateFormItem(index, "brand", "") // reset brand when item changes
@@ -927,21 +927,21 @@ const Inventory = () => {
                             isDisabled={!item.category}
                           />
                           {!item.category && (
-                            <p className="text-xs text-amber-600 mt-1 flex items-center space-x-1">
+                            <p className="text-xs text-amber-600 flex items-center space-x-1">
                               <AlertTriangle className="w-3 h-3" />
-                              <span>Please select a category first</span>
+                              <span>Select category first</span>
                             </p>
                           )}
                         </div>
 
                         {/* Brand */}
-                        <div className="space-y-3">
-                          <label className="block text-sm font-bold text-amber-800 mb-2">
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-amber-800">
                             Brand <span className="text-red-500">*</span>
                           </label>
                           <CreatableSelect
                             isClearable
-                            placeholder="Select or create brand..."
+                            placeholder="Select or create..."
                             onChange={(selected) => updateFormItem(index, "brand", selected ? selected.value : "")}
                             onCreateOption={(inputValue) => updateFormItem(index, "brand", inputValue)}
                             value={item.brand ? { label: item.brand, value: item.brand } : null}
@@ -955,24 +955,24 @@ const Inventory = () => {
                         </div>
 
                         {/* Quantity */}
-                        <div className="space-y-3">
-                          <label className="block text-sm font-bold text-amber-800 mb-2">
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-amber-800">
                             Quantity <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="number"
                             value={item.quantity || ""}
                             onChange={(e) => updateFormItem(index, "quantity", e.target.value)}
-                            className="w-full bg-white border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium placeholder-amber-400"
+                            className="w-full bg-white border-2 border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium placeholder-amber-400"
                             placeholder="Enter quantity..."
                             min="0"
                             step="0.01"
                           />
                         </div>
 
-                        {/* Low Stock Threshold (Percentage) */}
-                        <div className="space-y-3">
-                          <label className="block text-sm font-bold text-amber-800 mb-2">
+                        {/* Low Stock Threshold */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-amber-800">
                             Low Stock Threshold (%) <span className="text-red-500">*</span>
                           </label>
                           <input
@@ -983,7 +983,7 @@ const Inventory = () => {
                                 : "20"
                             }
                             onChange={(e) => updateFormItem(index, "low_stock_threshold", e.target.value / 100)}
-                            className="w-full bg-white border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium placeholder-amber-400"
+                            className="w-full bg-white border-2 border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium placeholder-amber-400"
                             min="0"
                             max="100"
                             step="1"
@@ -992,8 +992,8 @@ const Inventory = () => {
                         </div>
 
                         {/* Unit */}
-                        <div className="space-y-3">
-                          <label className="block text-sm font-bold text-amber-800 mb-2">
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-amber-800">
                             Unit <span className="text-red-500">*</span>
                           </label>
                           <Select
@@ -1013,28 +1013,28 @@ const Inventory = () => {
                         </div>
 
                         {/* Grams per ml/pc */}
-                        <div className="space-y-3">
-                          <label className="block text-sm font-bold text-amber-800 mb-2">Grams per ml/pc</label>
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-amber-800">Grams per ml/pc</label>
                           <input
                             type="text"
                             value={item.to_grams === "N/A" ? "N/A" : item.to_grams || ""}
                             disabled={item.unit === "g" || item.unit === "kg"}
                             onChange={(e) => updateFormItem(index, "to_grams", e.target.value)}
                             placeholder={item.unit === "g" || item.unit === "kg" ? "N/A" : "Enter grams per ml or pc"}
-                            className="w-full bg-white border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium placeholder-amber-400 disabled:bg-amber-100 disabled:text-amber-500"
+                            className="w-full bg-white border-2 border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium placeholder-amber-400 disabled:bg-amber-100 disabled:text-amber-500"
                           />
                         </div>
 
                         {/* Unit Price */}
-                        <div className="space-y-3">
-                          <label className="block text-sm font-bold text-amber-800 mb-2">
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-amber-800">
                             Unit Price (₱) <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="number"
                             value={item.unitPrice}
                             onChange={(e) => updateFormItem(index, "unitPrice", e.target.value)}
-                            className="w-full bg-white border-2 border-amber-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-3 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium placeholder-amber-400"
+                            className="w-full bg-white border-2 border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition-all duration-200 text-amber-800 font-medium placeholder-amber-400"
                             placeholder="0.00"
                             min="0"
                             step="0.01"
@@ -1047,25 +1047,25 @@ const Inventory = () => {
               </div>
             </div>
 
-            {/* Enhanced Modal Footer */}
-            <div className="bg-gradient-to-r from-amber-100 to-orange-100 px-8 py-3 flex flex-col sm:flex-row justify-between items-center gap-4 border-t-2 border-amber-200">
+            {/* Compact Modal Footer */}
+            <div className="bg-gradient-to-r from-amber-100 to-orange-100 px-6 py-3 flex flex-col sm:flex-row justify-between items-center gap-3 border-t border-amber-200">
               <div className="text-amber-700 flex items-center space-x-2">
-                <span className="font-bold text-lg">
-                  {formItems.length} item{formItems.length !== 1 ? "s" : ""} ready to save
+                <span className="font-bold">
+                  {formItems.length} item{formItems.length !== 1 ? "s" : ""} ready
                 </span>
               </div>
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={addNewFormItem}
-                  className="cursor-pointer bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-bold transition-all duration-200 transform hover:scale-105 flex items-center space-x-2 shadow-lg"
+                  className="cursor-pointer bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-4 py-2 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 flex items-center space-x-2 shadow-md"
                 >
-                  <Plus className="w-5 h-5" />
-                  <span>Add Another Item</span>
+                  <Plus className="w-4 h-4" />
+                  <span>Add Another</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleModalSave}
-                  className="cursor-pointer bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-3 rounded-xl font-bold transition-all duration-200 transform hover:scale-105 shadow-lg"
+                  className="cursor-pointer bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-2 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 shadow-md"
                 >
                   Save All Items
                 </button>
