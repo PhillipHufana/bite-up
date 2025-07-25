@@ -231,7 +231,7 @@ const Inventory = () => {
         price: Number.parseFloat(editData.price),
         quantity: Number.parseFloat(editData.quantity),
         cost_per_unit: Number.parseFloat(editData.cost_per_unit),
-        purchase_date: normalizedDate,
+        purchase_date: editData.purchase_date,
         low_stock_threshold: editData.low_stock_threshold ?? 0.2,
       })
 
@@ -723,13 +723,7 @@ const Inventory = () => {
                                   </td>
                                   <td className="px-4 py-3">
                                     {isEditing ? (
-                                      <input
-                                        // type="date"
-                                        name="purchase_date"
-                                        value={formatDate(editData.purchase_date) || ""}
-                                        // onChange={handleChange}
-                                        className="w-full bg-amber-50 border border-amber-300 rounded px-2 py-1"
-                                      />
+                                      <span>{formatDate(editData.purchase_date)}</span>
                                     ) : (
                                       formatDate(item.purchase_date)
                                     )}
