@@ -60,7 +60,7 @@ const App = () => {
       </div>
 
       {/* Menu Cards Section */}
-      <div className="px-8 pb-5 pt-2">
+      <div className="px-8 pb-5 pt-7">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {menuItems.map((item, index) => (

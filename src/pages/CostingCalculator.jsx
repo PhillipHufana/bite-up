@@ -429,8 +429,7 @@ const CostingCalculator = () => {
           {/* Sidebar Header */}
           <div className="p-4 border-b border-amber-200 flex items-center justify-between bg-gradient-to-r from-amber-100 to-orange-100">
             {!sidebarCollapsed && (
-              <div className="flex items-center space-x-2">
-                <Package className="w-5 h-5 text-amber-700" />
+              <div className="flex items-center space-x-2 ml-2">
                 <h2 className="text-lg font-semibold text-amber-900">Products</h2>
               </div>
             )}
@@ -470,19 +469,19 @@ const CostingCalculator = () => {
                 } border rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.01]`}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? "justify-center" : "space-x-3"}`}>
-                  <img
-                    src="/placeholder.svg?height=80&width=80"
-                    alt={product.name}
-                    className={`${
-                      sidebarCollapsed ? "w-8 h-8" : "w-16 h-16"
-                    } object-cover rounded-lg border-2 border-amber-200 shadow-sm`}
-                  />
-                  {!sidebarCollapsed && (
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-amber-900 text-sm leading-tight truncate">{product.name}</h3>
-                    </div>
-                  )}
-                </div>
+                <Cookie
+                  className={`${
+                    sidebarCollapsed ? "w-8 h-8" : "w-8 h-8"
+                  } text-amber-600 rounded-lg border-2 border-amber-200 shadow-sm p-1 bg-white`}
+                />
+                {!sidebarCollapsed && (
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-amber-900 text-sm leading-tight truncate">
+                      {product.name}
+                    </h3>
+                  </div>
+                )}
+              </div>
               </div>
             ))}
           </div>
