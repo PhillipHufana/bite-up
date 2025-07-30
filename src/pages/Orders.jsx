@@ -11,7 +11,6 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [filterDate, setFilterDate] = useState("");
-  const [sortBy, setSortBy] = useState("Name");
   const [orderBy, setOrderBy] = useState("Newest First");
   const [openDropdown, setOpenDropdown] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,7 +18,6 @@ const Orders = () => {
 
   const dropdownRef = useRef(null);
 
-  const sortOptions = ["Name", "Date", "Cost"];
   const orderOptions = ["Newest First", "Oldest First"];
 
   const fetchOrders = async () => {
@@ -81,20 +79,15 @@ const Orders = () => {
       });
     }
 
+    // Sorting only by date (Newest/Oldest)
     filtered.sort((a, b) => {
-      let comp = 0;
-      if (sortBy === "Name") {
-        comp = a.firstName.localeCompare(b.firstName);
-      } else if (sortBy === "Date") {
-        comp = a.rawDate - b.rawDate;
-      } else if (sortBy === "Cost") {
-        comp = a.total - b.total;
-      }
-      return orderBy === "Newest First" ? -comp : comp;
+      return orderBy === "Newest First"
+        ? b.rawDate - a.rawDate
+        : a.rawDate - b.rawDate;
     });
 
     setFilteredOrders(filtered);
-  }, [orders, filterDate, sortBy, orderBy]);
+  }, [orders, filterDate, orderBy]);
 
   const toggleDropdown = (dropdownName) => {
     setOpenDropdown((prev) => (prev === dropdownName ? null : dropdownName));
@@ -146,40 +139,6 @@ const Orders = () => {
               onChange={(e) => setFilterDate(e.target.value)}
               className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 transition-all duration-300 focus:ring-2 focus:ring-amber-400 focus:border-amber-400 shadow-sm"
             />
-          </div>
-
-          {/* Sort By Dropdown */}
-          <div className="relative">
-            <label className="block mb-1 font-semibold text-amber-900">
-              Sort By
-            </label>
-            <button
-              onClick={() => toggleDropdown("sort")}
-              className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 shadow-sm flex justify-between items-center"
-            >
-              {sortBy}
-              {openDropdown === "sort" ? (
-                <ChevronUpIcon className="w-5 h-5 text-amber-700" />
-              ) : (
-                <ChevronDownIcon className="w-5 h-5 text-amber-700" />
-              )}
-            </button>
-            {openDropdown === "sort" && (
-              <div className="absolute mt-2 w-full bg-white rounded-lg shadow-lg ring-1 ring-black/10 z-10">
-                {sortOptions.map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => {
-                      setSortBy(option);
-                      setOpenDropdown(null);
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-amber-100 rounded-lg"
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Order Dropdown */}
