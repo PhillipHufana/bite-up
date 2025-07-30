@@ -12,13 +12,11 @@ import {
 function InventoryRecords() {
   const [records, setRecords] = useState([]);
   const [filterDate, setFilterDate] = useState("");
-  const [sortBy, setSortBy] = useState("Name");
   const [orderBy, setOrderBy] = useState("Newest First");
   const [openDropdown, setOpenDropdown] = useState(null);
 
   const dropdownRef = useRef(null);
 
-  const sortOptions = ["Name", "Date", "Cost"];
   const orderOptions = ["Newest First", "Oldest First"];
 
   const fetchInventoryRecords = async () => {
@@ -56,29 +54,13 @@ function InventoryRecords() {
     ? records
         .filter((record) => {
           if (!filterDate) return true;
-          const localDate = new Date(record.date).toISOString().slice(0, 10);
-          return localDate === filterDate;
+          const recordDate = new Date(record.date).toLocaleDateString("en-CA");
+          return recordDate === filterDate;
         })
         .sort((a, b) => {
-          let valA, valB;
-          switch (sortBy) {
-            case "Name":
-              valA = a.id.toLowerCase();
-              valB = b.id.toLowerCase();
-              break;
-            case "Date":
-              valA = new Date(a.date);
-              valB = new Date(b.date);
-              break;
-            case "Cost":
-              valA = parseFloat(a.totalCost.replace("P ", "")) || 0;
-              valB = parseFloat(b.totalCost.replace("P ", "")) || 0;
-              break;
-            default:
-              return 0;
-          }
-          const comparison = valA > valB ? 1 : valA < valB ? -1 : 0;
-          return orderBy === "Newest First" ? -comparison : comparison;
+          const valA = new Date(a.date).getTime();
+          const valB = new Date(b.date).getTime();
+          return orderBy === "Newest First" ? valB - valA : valA - valB;
         })
     : [];
 
@@ -90,7 +72,7 @@ function InventoryRecords() {
 
       <div className="rounded-xl p-4">
         <div
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
+          className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"
           ref={dropdownRef}
         >
           {/* Filter by Date */}
@@ -104,40 +86,6 @@ function InventoryRecords() {
               onChange={(e) => setFilterDate(e.target.value)}
               className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 transition-all duration-300 focus:ring-2 focus:ring-amber-400 focus:border-amber-400 shadow-sm"
             />
-          </div>
-
-          {/* Sort By Dropdown */}
-          <div className="relative">
-            <label className="block mb-1 font-semibold text-amber-900">
-              Sort By
-            </label>
-            <button
-              onClick={() => toggleDropdown("sort")}
-              className="w-full bg-amber-100 border border-amber-300 rounded-lg px-3 py-2 shadow-sm flex justify-between items-center"
-            >
-              {sortBy}
-              {openDropdown === "sort" ? (
-                <ChevronUpIcon className="w-5 h-5 text-amber-700" />
-              ) : (
-                <ChevronDownIcon className="w-5 h-5 text-amber-700" />
-              )}
-            </button>
-            {openDropdown === "sort" && (
-              <div className="absolute mt-2 w-full bg-white rounded-lg shadow-lg ring-1 ring-black/10 z-10">
-                {sortOptions.map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => {
-                      setSortBy(option);
-                      setOpenDropdown(null);
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-amber-100 rounded-lg"
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Order Dropdown */}
